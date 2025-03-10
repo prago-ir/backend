@@ -133,3 +133,13 @@ media/
 ../.idea/
 
 /.env
+.idea/.gitignore
+.idea/backend.iml
+.idea/dataSources.xml
+.idea/misc.xml
+.idea/modules.xml
+.idea/vcs.xml
+.idea/dictionaries/mforo.xml
+.idea/inspectionProfiles/profiles_settings.xml
+.idea/inspectionProfiles/Project_Default.xml
+.idea/runConfigurations/runserver.xml
