@@ -1,33 +1,8 @@
 from django.db import models
 from django.contrib.auth import get_user_model
 
-User = get_user_model()
-
-
-class Category(models.Model):
-    name = models.CharField(max_length=100, verbose_name='نام دسته‌بندی')
-    slug = models.SlugField(max_length=100, unique=True, verbose_name='اسلاگ دسته‌بندی')
-    parent = models.ForeignKey('self', null=True, blank=True, on_delete=models.CASCADE, related_name='children',
-                               verbose_name='دسته‌بندی والد')
-
-    def __str__(self):
-        return self.name
-
-    class Meta:
-        verbose_name = 'دسته‌بندی'
-        verbose_name_plural = 'دسته‌بندی‌ها'
-
-
-class Tag(models.Model):
-    name = models.CharField(max_length=50, verbose_name='نام تگ')
-    slug = models.SlugField(max_length=50, unique=True, verbose_name='اسلاگ تگ')
-
-    def __str__(self):
-        return self.name
-
-    class Meta:
-        verbose_name = 'تگ'
-        verbose_name_plural = 'تگ‌ها'
+from taxonomy.models import Category, Tag
+from accounts.models import OrganizerProfile, TeacherProfile
 
 
 class Attribute(models.Model):
@@ -56,6 +31,8 @@ class Chapter(models.Model):
 
 
 class Course(models.Model):
+    objects = models.Manager()
+
     cover_image = models.ImageField(verbose_name='تصویر دوره', upload_to='cover_image')
     title = models.CharField(max_length=100, verbose_name='تیتر دوره')
     slug = models.SlugField(max_length=100, unique=True, verbose_name='اسلاگ دوره')
@@ -65,11 +42,11 @@ class Course(models.Model):
     total_hours = models.DecimalField(max_digits=5, decimal_places=1, verbose_name='مجموع ساعات')
 
     # Relationships
-    organizers = models.ManyToManyField(User, related_name='organized_courses', verbose_name='برگزار کنندگان')
-    teachers = models.ManyToManyField(User, related_name='teaching_courses', verbose_name='مدرسین')
-    attributes = models.ManyToManyField(Attribute, related_name='courses', verbose_name='ویژگی ها')
-    tags = models.ManyToManyField(Tag, related_name='courses', verbose_name='تگ ها')
-    categories = models.ManyToManyField(Category, related_name='courses', verbose_name='دسته بندی ها')
+    organizers = models.ManyToManyField(OrganizerProfile, related_name='organized_courses', verbose_name='برگزار کنندگان')
+    teachers = models.ManyToManyField(TeacherProfile, related_name='teaching_courses', verbose_name='مدرسین')
+    attributes = models.ManyToManyField(Attribute, related_name='courses', verbose_name='ویژگی‌ها')
+    tags = models.ManyToManyField(Tag, related_name='courses', verbose_name='تگ‌ها')
+    categories = models.ManyToManyField(Category, related_name='courses', verbose_name='دسته‌بندی‌ها')
 
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='تاریخ ایجاد')
     updated_at = models.DateTimeField(auto_now=True, verbose_name='تاریخ بروزرسانی')
@@ -79,7 +56,17 @@ class Course(models.Model):
 
     class Meta:
         verbose_name = 'دوره'
-        verbose_name_plural = 'دوره ها'
+        verbose_name_plural = 'دوره‌ها'
+        
+    def is_free_for_user(self, user):
+        """Check if the course is free for a specific user via their subscriptions"""
+        from django.utils import timezone
+        return UserSubscription.objects.filter(
+            user=user,
+            is_active=True,
+            end_date__gt=timezone.now(),
+            subscription_plan__included_courses=self
+        ).exists()
 
 
 class Episode(models.Model):
@@ -90,7 +77,7 @@ class Episode(models.Model):
         ('quiz', 'آزمون'),
     )
 
-    title = models.CharField(max_length=200, verbose_name='عنوان ��پیزود')
+    title = models.CharField(max_length=200, verbose_name='عنوان اپیزود')
     slug = models.SlugField(max_length=200, unique=True, verbose_name='اسلاگ اپیزود')
     chapter = models.ForeignKey(Chapter, on_delete=models.CASCADE, related_name='episodes', verbose_name='فصل')
     course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name='episodes', verbose_name='دوره')
