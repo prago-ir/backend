@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import MyUser, OTP
+from .models import MyUser, OTP, Organizer, Teacher
 
 class MyUserSerializer(serializers.ModelSerializer):
     class Meta:
@@ -19,3 +19,17 @@ class OTPSerializer(serializers.ModelSerializer):
     class Meta:
         model = OTP
         fields = ['email', 'phone', 'otp']
+
+
+class OrganizerSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Organizer
+        fields = ['id', 'name', 'logo', 'bio']
+
+
+class TeacherSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Teacher
+        fields = ['id', 'name', 'avatar', 'bio']
+
+
