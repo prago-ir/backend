@@ -1,8 +1,9 @@
 from django.db import models
-from django.contrib.auth import get_user_model
+from django.utils import timezone
 
+from subscriptions.models import UserSubscription
 from taxonomy.models import Category, Tag
-from accounts.models import OrganizerProfile, TeacherProfile
+from accounts.models import Organizer, Teacher
 
 
 class Attribute(models.Model):
@@ -31,19 +32,24 @@ class Chapter(models.Model):
 
 
 class Course(models.Model):
-    objects = models.Manager()
-
     cover_image = models.ImageField(verbose_name='تصویر دوره', upload_to='cover_image')
     title = models.CharField(max_length=100, verbose_name='تیتر دوره')
     slug = models.SlugField(max_length=100, unique=True, verbose_name='اسلاگ دوره')
     description = models.TextField(verbose_name='توضیحات کامل دوره')
     price = models.DecimalField(max_digits=9, decimal_places=0, verbose_name='قیمت')
+    
+    # Special offer fields
+    special_offer_price = models.DecimalField(max_digits=9, decimal_places=0, null=True, blank=True, 
+                                            verbose_name='قیمت ویژه')
+    special_offer_start_date = models.DateTimeField(null=True, blank=True, verbose_name='تاریخ شروع پیشنهاد ویژه')
+    special_offer_end_date = models.DateTimeField(null=True, blank=True, verbose_name='تاریخ پایان پیشنهاد ویژه')
+    
     intro_video_link = models.URLField(verbose_name='لینک ویدیو معرفی')
     total_hours = models.DecimalField(max_digits=5, decimal_places=1, verbose_name='مجموع ساعات')
 
     # Relationships
-    organizers = models.ManyToManyField(OrganizerProfile, related_name='organized_courses', verbose_name='برگزار کنندگان')
-    teachers = models.ManyToManyField(TeacherProfile, related_name='teaching_courses', verbose_name='مدرسین')
+    organizers = models.ManyToManyField(Organizer, related_name='organized_courses', verbose_name='برگزار کنندگان')
+    teachers = models.ManyToManyField(Teacher, related_name='teaching_courses', verbose_name='مدرسین')
     attributes = models.ManyToManyField(Attribute, related_name='courses', verbose_name='ویژگی‌ها')
     tags = models.ManyToManyField(Tag, related_name='courses', verbose_name='تگ‌ها')
     categories = models.ManyToManyField(Category, related_name='courses', verbose_name='دسته‌بندی‌ها')
@@ -67,6 +73,22 @@ class Course(models.Model):
             end_date__gt=timezone.now(),
             subscription_plan__included_courses=self
         ).exists()
+        
+    def has_active_special_offer(self):
+        """Check if the course currently has an active special offer"""
+        now = timezone.now()
+        return (
+            self.special_offer_price is not None and
+            self.special_offer_start_date is not None and
+            self.special_offer_end_date is not None and
+            self.special_offer_start_date <= now <= self.special_offer_end_date
+        )
+    
+    def get_current_price(self):
+        """Get the current price considering any active special offers"""
+        if self.has_active_special_offer():
+            return self.special_offer_price
+        return self.price
 
 
 class Episode(models.Model):
