@@ -22,7 +22,6 @@ class MyUserManager(BaseUserManager):
 
 
 PHONE_VALIDATOR = RegexValidator(
-    # r"^(\+?\d{0,4}|0)?\s?-?\s?(\(?\d{3}\)?)\s?-?\s?(\(?\d{3}\)?)\s?-?\s?(\(?\d{4}\)?)?$",
     r"^(?:\+98|0)9\d{9}$",
     "فرمت شماره وارد شده نادرست است"
 )
@@ -39,7 +38,7 @@ class MyUser(AbstractUser, PermissionsMixin):
         validators=[PHONE_VALIDATOR],
         help_text="شماره تماس یا با فرمت: 09123456789, یا با فرمت: +989123456789 نوشته شود"
     )
-    username = models.CharField(max_length=50, unique=True, verbose_name="یوزرنیم")
+    username = models.CharField(max_length=50, unique=True, verbose_name="نام کاربری")
     first_name = models.CharField(max_length=50, verbose_name="نام")
     last_name = models.CharField(max_length=50, verbose_name="نام خانوادگی")
     is_active = models.BooleanField(default=True, verbose_name="فعال است")
@@ -60,6 +59,33 @@ class MyUser(AbstractUser, PermissionsMixin):
         if not self.email or not self.phone:
             raise ValidationError("باید یا ایمیل یا شماره تماس وارد شود.")
         return super().clean()
+    
+    def is_teacher(self):
+        """Check if user is a teacher"""
+        return self.groups.filter(name='Teachers').exists()
+    
+    def is_organizer(self):
+        """Check if user is an organizer"""
+        return self.groups.filter(name='Organizers').exists()
+    
+    def is_author(self):
+        """Check if user is an author"""
+        return self.groups.filter(name='Authors').exists()
+    
+    def get_roles(self):
+        """Get all user roles"""
+        roles = []
+        if self.is_teacher():
+            roles.append('teacher')
+        if self.is_organizer():
+            roles.append('organizer')
+        if self.is_author():
+            roles.append('author')
+        if self.is_staff:
+            roles.append('staff')
+        if self.is_superuser:
+            roles.append('admin')
+        return roles
 
 
 class OTP(models.Model):
@@ -97,13 +123,16 @@ class Profile(models.Model):
     class Meta:
         verbose_name = 'پروفایل کاربر'
         verbose_name_plural = 'پروفایل‌های کاربران'
+        
+    def full_name(self):
+        return f"{self.first_name} {self.last_name}"
     
     def __str__(self):
-        return f"Profile for {self.user.full_name()}"
+        return f"Profile for {self.full_name()}"
     
     
 class Teacher(models.Model):
-    user = models.OneToOneField(MyUser, on_delete=models.CASCADE, related_name='teacher_profile')
+    user = models.OneToOneField(MyUser, on_delete=models.CASCADE, related_name='teacher_profile', null=True, blank=True)
     first_name = models.CharField(max_length=50, blank=True, verbose_name="نام مدرس")
     last_name = models.CharField(max_length=50, blank=True, verbose_name="نام خانوادگی مدرس")
     slug = models.SlugField(max_length=50, unique=True, verbose_name='اسلاگ مدرس')
@@ -113,9 +142,12 @@ class Teacher(models.Model):
     class Meta:
         verbose_name = 'پروفایل مدرس'
         verbose_name_plural = 'پروفایل‌های مدرسین'
+        
+    def full_name(self):
+        return f"{self.first_name} {self.last_name}"
     
     def __str__(self):
-        return f"Teacher: {self.user.full_name()}"
+        return f"Teacher: {self.full_name()}"
 
 
 class Organizer(models.Model):
@@ -138,12 +170,18 @@ class Organizer(models.Model):
 
 
 class Author(models.Model):
-    user = models.OneToOneField(MyUser, on_delete=models.CASCADE, related_name='author_profile')
+    user = models.OneToOneField(MyUser, on_delete=models.CASCADE, related_name='author_profile', null=True, blank=True)
+    first_name = models.CharField(max_length=50, blank=True, verbose_name="نام مدرس")
+    last_name = models.CharField(max_length=50, blank=True, verbose_name="نام خانوادگی مدرس")
+    slug = models.SlugField(max_length=50, unique=True, verbose_name='اسلاگ مدرس')
     biography = models.TextField(blank=True, verbose_name='بیوگرافی')
-
+    
     class Meta:
         verbose_name = 'پروفایل نویسنده'
         verbose_name_plural = 'پروفایل‌های نویسندگان'
+        
+    def full_name(self):
+        return f"{self.first_name} {self.last_name}"
     
     def __str__(self):
-        return f"Author: {self.pen_name or self.user.full_name()}"
+        return f"Author: {self.user.full_name()}"

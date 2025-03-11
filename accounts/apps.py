@@ -5,3 +5,7 @@ class UsersConfig(AppConfig):
     default_auto_field = 'django.db.models.BigAutoField'
     name = 'accounts'
     verbose_name = 'مدیریت حساب‌ها'
+
+
+    def ready(self):
+        import accounts.signals

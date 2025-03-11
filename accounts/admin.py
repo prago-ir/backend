@@ -2,20 +2,31 @@ from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
 from import_export.admin import ExportActionModelAdmin, ImportExportModelAdmin
 from django.utils.translation import gettext_lazy as _
-from .models import MyUser, OTP
+from .models import MyUser, OTP, Author, Teacher, Organizer, Profile
 
 @admin.register(OTP)
 class OTPAdmin(admin.ModelAdmin):
     list_display = ("__str__", "secret")
     search_fields = ("email", "phone")
 
+
+class ProfileInline(admin.StackedInline):
+    model = Profile
+    can_delete = False
+
+
 @admin.register(MyUser)
 class MyUserAdmin(UserAdmin, ExportActionModelAdmin, ImportExportModelAdmin):
+    model = MyUser
+    list_display = ("username", "email", "phone", "first_name", "last_name", "is_staff", "get_roles_display")
+    search_fields = ("username", "first_name", "last_name", "email", "phone")
+    inlines = [ProfileInline]
+    
     fieldsets = (
         (None, {"fields": ("username", "password")}),
-        (_("Personal info"), {"fields": ("first_name", "last_name", "email", "phone")}),
+        ("Personal info", {"fields": ("first_name", "last_name", "email", "phone")}),
         (
-            _("Permissions"),
+            "Permissions",
             {
                 "fields": (
                     "is_active",
@@ -26,7 +37,7 @@ class MyUserAdmin(UserAdmin, ExportActionModelAdmin, ImportExportModelAdmin):
                 ),
             },
         ),
-        (_("Important dates"), {"fields": ("last_login", "date_joined")}),
+        ("Important dates", {"fields": ("last_login", "date_joined")}),
     )
     add_fieldsets = (
         (
@@ -37,8 +48,15 @@ class MyUserAdmin(UserAdmin, ExportActionModelAdmin, ImportExportModelAdmin):
             },
         ),
     )
-    list_display = ("username", "email", "phone", "first_name", "last_name", "is_staff")
-    search_fields = ("username", "first_name", "last_name", "email", "phone")
+    
+    def get_roles_display(self, obj):
+        return ", ".join(obj.get_roles())
+    get_roles_display.short_description = 'نقش‌ها'
+    
 
+
+admin.site.register(Teacher)
+admin.site.register(Organizer)
+admin.site.register(Author)
 
 
