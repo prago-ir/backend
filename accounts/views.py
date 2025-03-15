@@ -10,6 +10,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 
 from .models import OTP, MyUser
 from .serializers import MyUserSerializer
+from .tasks import send_otp_email, send_otp_sms
 
 
 class RequestOTPView(APIView):
@@ -38,11 +39,15 @@ class RequestOTPView(APIView):
 
         totp = pyotp.TOTP(otp_record.secret)
         otp = totp.now()  # Generate a time-based OTP
-
-        # Send OTP logic here (SMS or Email)
+        
+        # Send OTP asynchronously using Celery
+        if email:
+            send_otp_email.delay(email, otp)
+        elif phone:
+            send_otp_sms.delay(phone, otp)
         print(otp)
 
-        return Response({"message": "OTP sent.", "otp": otp}, status=status.HTTP_200_OK)
+        return Response({"message": "OTP sent successfully", "otp": otp}, status=status.HTTP_200_OK)
 
 
 
@@ -133,18 +138,26 @@ class RequestResetPassword(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
-        identifier = request.data.get("identifier")
         try:
-            user = MyUser.objects.get(email=identifier) if "@" in identifier else MyUser.objects.get(phone=identifier)
+            user = request.user
             token = PasswordResetTokenGenerator().make_token(user)
             
-            # Send token via email or SMS
-            if "@" in identifier:
-                # Email sending logic here
-                pass
-            else:
-                # Implement SMS sending logic here
-                pass
+            # Send token asynchronously via Celery
+            subject = "Password Reset Request"
+            message = f"Use this token to reset your password: {token}"
+            html_message = f"""
+            <div style="font-family: Vazirmatn, 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eee;" dir="rtl">
+                <h2>درخواست ریست پسورد پراگو</h2>
+                <p>ما درخواستی برای ریست پسورد شما دریافت کردیم. از لینک زیر استفاده کنید:</p>
+                <div style="background-color: #f4f4f4; padding: 10px; margin: 15px 0; text-align: center;">
+                    {token}
+                </div>
+                <p>اگر شما درخواست ریست پسورد نداده اید، لطفا این ایمیل را نادیده بگیرید.</p>
+                <p><a href="https://prago.ir">پراگو</a>| هر آنچه برای گذر نیاز دارید</p>
+            </div>
+            """
+            from .tasks import send_email_task
+            send_email_task.delay(subject, message, [user.email], html_message)
             
             return Response({"message": "Password reset token sent."}, status=status.HTTP_200_OK)
         except MyUser.DoesNotExist:

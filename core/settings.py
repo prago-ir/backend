@@ -42,6 +42,8 @@ INSTALLED_APPS = [
     'rest_framework_simplejwt',
     'corsheaders',
     'import_export',
+    'django_celery_results',
+    'django_celery_beat',
 
     # My Apps
     'accounts',
@@ -161,3 +163,19 @@ SIMPLE_JWT = {
     'SIGNING_KEY': '38deaded12506b5ea436f949830fb5881d7e783c46b05378ca8110a3bde05c0b',  # Replace with your actual secret key
     'AUTH_HEADER_TYPES': ('Bearer',),
 }
+
+Celery_TIMEZONE = "Asia/Tehran"
+CELERY_BROKER_URL = 'redis://localhost:6379/0'  # For development with Redis
+CELERY_RESULT_BACKEND = 'django-db'
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'
+
+# Email Configuration
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.gmail.com'  # Change to your SMTP server
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = 'your-email@example.com'  # Your email
+EMAIL_HOST_PASSWORD = 'your-password'  # Your email password or app password
+DEFAULT_FROM_EMAIL = 'Your App <your-email@example.com>'
