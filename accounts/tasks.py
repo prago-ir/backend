@@ -61,7 +61,7 @@ def send_otp_email(email, otp):
         <p style="margin-top: 20px; font-size: 12px; color: #777;">
             این کد تا ده دقیقه دیگر اعتبار دارد. اگر شما این کد را درخواست نکرده اید، لطفا این ایمیل را نادیده بگیرید.
         </p>
-        <p><a href="https://prago.ir">پراگو</a>| هر آنچه برای گذر نیاز دارید</p>
+        <p>پراگو | هر آنچه برای گذر نیاز دارید</p>
     </div>
     """
     return send_email_task(subject, message, [email], html_message)

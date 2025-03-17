@@ -149,11 +149,11 @@ class RequestResetPassword(APIView):
             <div style="font-family: Vazirmatn, 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eee;" dir="rtl">
                 <h2>درخواست ریست پسورد پراگو</h2>
                 <p>ما درخواستی برای ریست پسورد شما دریافت کردیم. از لینک زیر استفاده کنید:</p>
-                <div style="background-color: #f4f4f4; padding: 10px; margin: 15px 0; text-align: center;">
-                    {token}
+                <div style="background-color: #f4f4f4; padding: 10px; margin: 15px 0; text-align: left;">
+                    <a href="https://prago.ir/reset-password/{token}">https://prago.ir/reset-password/{token}</a>
                 </div>
                 <p>اگر شما درخواست ریست پسورد نداده اید، لطفا این ایمیل را نادیده بگیرید.</p>
-                <p><a href="https://prago.ir">پراگو</a>| هر آنچه برای گذر نیاز دارید</p>
+                <p>پراگو | هر آنچه برای گذر نیاز دارید</p>
             </div>
             """
             from .tasks import send_email_task
