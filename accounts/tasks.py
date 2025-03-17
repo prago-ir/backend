@@ -2,8 +2,15 @@ from celery import shared_task
 from django.core.mail import send_mail
 from django.conf import settings
 import logging
+from ippanel import Client as SMSClient
+
+from core.settings import SMS_API_KEY
 
 logger = logging.getLogger(__name__)
+
+sms_api_key = SMS_API_KEY
+
+sms = SMSClient(sms_api_key)
 
 @shared_task
 def send_email_task(subject, message, recipient_list, html_message=None):
@@ -32,12 +39,8 @@ def send_sms_task(phone_number, message):
     Uses your SMS provider's API
     """
     try:
-        # Replace with your SMS service integration
-        # Example with a hypothetical SMS service:
-        # sms_service = SMSService(settings.SMS_API_KEY)
-        # result = sms_service.send(phone_number, message)
-        
-        # For demonstration (replace with actual SMS sending):
+        message = sms.send("+983000505", phone_number, message)
+       
         logger.info(f"SMS sent to {phone_number}: {message}")
         return True
     except Exception as e:
@@ -71,5 +74,11 @@ def send_otp_sms(phone, otp):
     """
     Task to send OTP via SMS
     """
-    message = f"کد تایید ورود: {otp}"
-    return send_sms_task(phone, message)
+    try:
+        message = sms.send_pattern("4v3jrycm29newaf", "+983000505", phone, {"code": otp})
+       
+        logger.info(f"SMS sent to {phone}: {message}")
+        return True
+    except Exception as e:
+        logger.error(f"Failed to send SMS to {phone}: {str(e)}")
+        raise e
