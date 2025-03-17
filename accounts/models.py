@@ -14,11 +14,14 @@ class MyUserManager(BaseUserManager):
         user.save(using=self._db)
         return user
 
-    def create_superuser(self, email, username, password=None, **extra_fields):
+    def create_superuser(self, username, password=None, email=None, phone=None, **extra_fields):
         extra_fields.setdefault('is_staff', True)
         extra_fields.setdefault('is_superuser', True)
+        
+        if not email and not phone:
+            raise ValueError("باید یا ایمیل یا شماره تماس وارد شود.")
 
-        return self.create_user(email=email, username=username, password=password, **extra_fields)
+        return self.create_user(email=email, phone=phone, username=username, password=password, **extra_fields)
 
 
 PHONE_VALIDATOR = RegexValidator(
