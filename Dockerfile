@@ -1,31 +1,30 @@
-FROM python:3.12.7-slim
-
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential \
-    python3-dev \
-    libffi-dev \
-    libpq-dev \
-    default-libmysqlclient-dev \
-    libxml2-dev \
-    libxslt1-dev \
-    liblapack-dev \
-    libblas-dev \
-    gfortran \
-    && rm -rf /var/lib/apt/lists/*
+FROM python:3.10-slim
 
 WORKDIR /app
 
-COPY requirements.txt ./
+# Install system dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    default-libmysqlclient-dev \
+    pkg-config \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Python dependencies
+COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
+# Copy project
 COPY . .
 
-# Add this line to your existing Dockerfile
-COPY entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh
+# Make entrypoint executable
+RUN chmod +x /app/entrypoint.sh
 
-# Set the entrypoint script
-ENTRYPOINT ["/entrypoint.sh"]
+# Create directories for static and media files
+RUN mkdir -p /app/assets_served /app/media && \
+    chmod -R 755 /app/assets_served /app/media
 
-# Your existing CMD should remain as is
-CMD ["gunicorn", "core.wsgi:application", "--bind", "0.0.0.0:8000"]
+# Set entrypoint
+ENTRYPOINT ["/app/entrypoint.sh"]
+
+# Start Gunicorn
+CMD ["gunicorn", "--bind", "0.0.0.0:8000", "core.wsgi:application"]

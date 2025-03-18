@@ -1,7 +1,7 @@
+import logging
 from celery import shared_task
 from django.core.mail import send_mail
 from django.conf import settings
-import logging
 from ippanel import Client as SMSClient
 
 from core.settings import SMS_API_KEY

@@ -29,9 +29,18 @@ until mysql_ready; do
 done
 echo "MySQL database is available!"
 
+# Create necessary directories if they don't exist
+echo "Creating necessary directories..."
+mkdir -p /app/assets_served
+mkdir -p /app/media
+
+# Set permissions
+chmod -R 755 /app/assets_served
+chmod -R 755 /app/media
+
 # Collect static files
 echo "Collecting static files..."
-python manage.py collectstatic --noinput
+python manage.py collectstatic --noinput --clear
 
 # Apply database migrations
 echo "Applying database migrations..."
