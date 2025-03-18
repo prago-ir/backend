@@ -13,6 +13,8 @@ https://docs.djangoproject.com/en/4.2/ref/settings/
 import os
 from pathlib import Path
 from datetime import timedelta
+import time
+import logging
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -100,8 +102,39 @@ DATABASES = {
         'PASSWORD': os.environ.get('DB_PASSWORD', ''),
         'HOST': os.environ.get('DB_HOST', ''),
         'PORT': os.environ.get('DB_PORT', ''),
+        'OPTIONS': {
+            'init_command': "SET sql_mode='STRICT_TRANS_TABLES'"
+        },
+        'CONN_MAX_AGE': 60,
     }
 }
+
+# Add database connection retries
+if os.environ.get('DB_ENGINE') == 'django.db.backends.mysql':
+    # Only add this for non-development environments
+    if 'mysql' in os.environ.get('DB_HOST', ''):
+        logger = logging.getLogger('django')
+        
+        # Get database connection
+        import django.db.backends.mysql.base
+        original_connect = django.db.backends.mysql.base.DatabaseWrapper.get_new_connection
+        
+        def get_new_connection_with_retry(self, conn_params):
+            retries = 10
+            delay = 3
+            for attempt in range(retries):
+                try:
+                    return original_connect(self, conn_params)
+                except Exception as e:
+                    if attempt < retries - 1:
+                        logger.warning(f"Database connection attempt {attempt+1}/{retries} failed. Retrying in {delay} seconds... Error: {str(e)}")
+                        time.sleep(delay)
+                        delay *= 1.5  # Exponential backoff
+                    else:
+                        logger.error(f"Failed to connect to database after {retries} attempts: {str(e)}")
+                        raise
+        
+        django.db.backends.mysql.base.DatabaseWrapper.get_new_connection = get_new_connection_with_retry
 
 # Password validation
 # https://docs.djangoproject.com/en/4.2/ref/settings/#auth-password-validators
@@ -140,6 +173,10 @@ STATIC_ROOT = BASE_DIR / 'assets_served/'
 STATICFILES_DIRS = [
     BASE_DIR / 'assets/',
 ]
+
+# Media files configuration
+MEDIA_URL = 'media/'
+MEDIA_ROOT = BASE_DIR / 'media/'
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field

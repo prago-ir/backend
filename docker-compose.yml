@@ -4,7 +4,7 @@ services:
       context: .
       dockerfile: Dockerfile
     expose:
-      - "8080"
+      - "8000"
     environment:
       - SPRING_DATASOURCE_URL=jdbc:mysql://${DB_HOST}:${DB_PORT}/${DB_NAME}?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
       - SPRING_DATASOURCE_USERNAME=${DB_USER}
@@ -30,8 +30,10 @@ services:
       - SMS_API_KEY=${SMS_API_KEY}
       - JWT_SIGNING_KEY=${JWT_SIGNING_KEY}
     depends_on:
-      - mysql
-      - redis
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_started
     networks:
       - prago_network
     env_file:
@@ -52,6 +54,12 @@ services:
       - prago_network
     env_file:
       - .env
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u$$MYSQL_USER", "-p$$MYSQL_PASSWORD"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
 
   redis:
     image: redis:6.2
@@ -61,6 +69,11 @@ services:
       - redis_data:/data
     networks:
       - prago_network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
   nginx:
     image: nginx:latest
