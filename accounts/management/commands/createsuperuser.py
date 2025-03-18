@@ -73,9 +73,6 @@ class Command(BaseCommand):
         database = options.get('database')
         verbosity = options.get('verbosity')
 
-        # Check if required tables exist
-        self._check_required_tables(database)
-
         # If non-interactive mode, ensure we have required fields
         if not interactive:
             if not password:
@@ -171,27 +168,3 @@ class Command(BaseCommand):
                     "The Profile table doesn't exist. Run 'python manage.py migrate' first."
                 ))
             raise CommandError(str(e))
-    
-    def _check_required_tables(self, database):
-        """Check if all required tables exist."""
-        try:
-            # Check if the auth user table exists
-            UserModel = get_user_model()
-            required_tables = [
-                UserModel._meta.db_table,
-                'accounts_profile'  # Also check for profile table
-            ]
-            
-            with connection.cursor() as cursor:
-                for table_name in required_tables:
-                    cursor.execute(f"SELECT 1 FROM sqlite_master WHERE type='table' AND name='{table_name}';")
-                    if not cursor.fetchone():
-                        raise CommandError(
-                            f"Table '{table_name}' doesn't exist. "
-                            f"Have you run 'python manage.py migrate' to create your database tables?"
-                        )
-        except (OperationalError, ProgrammingError) as e:
-            raise CommandError(
-                f"Database error: {str(e)}. "
-                f"Have you run 'python manage.py migrate' to create your database tables?"
-            )
