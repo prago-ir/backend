@@ -22,10 +22,10 @@ from django.conf import settings
 from django.conf.urls.static import static
 
 urlpatterns = [
-    path('prag/', admin.site.urls),
-    path('api/auth/', include(('accounts.urls', 'users'), namespace='users')),
-    path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
-    path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),   
+    path('api/v1/prag/', admin.site.urls),
+    path('api/v1/auth/', include(('accounts.urls', 'auth'), namespace='auth')),
+    path('api/v1/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
+    path('api/v1/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),   
 ]
 
 # Add static file serving for development
