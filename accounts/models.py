@@ -125,7 +125,7 @@ class Profile(models.Model):
     
     class Meta:
         verbose_name = 'پروفایل کاربر'
-        verbose_name_plural = 'پروفایل کاربران'
+        verbose_name_plural = 'پروفایل کاربرها'
         
     def full_name(self):
         return f"{self.user.first_name} {self.user.last_name}"
@@ -144,7 +144,7 @@ class Teacher(models.Model):
 
     class Meta:
         verbose_name = 'مدرس'
-        verbose_name_plural = 'مدرسین'
+        verbose_name_plural = 'مدرس‌ها'
         
     def full_name(self):
         return f"{self.first_name} {self.last_name}"
@@ -166,7 +166,7 @@ class Organizer(models.Model):
 
     class Meta:
         verbose_name = 'برگزارکننده'
-        verbose_name_plural = 'برگزارکنندگان'
+        verbose_name_plural = 'برگزارکننده‌ها'
     
     def __str__(self):
         return f"Organizer: {self.organization_name}"
@@ -181,7 +181,7 @@ class Author(models.Model):
     
     class Meta:
         verbose_name = 'نویسنده'
-        verbose_name_plural = 'نویسندگان'
+        verbose_name_plural = 'نویسنده‌ها'
         
     def full_name(self):
         return f"{self.first_name} {self.last_name}"
