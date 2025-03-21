@@ -51,6 +51,11 @@ INSTALLED_APPS = [
     'django_celery_results',
     'django_celery_beat',
 
+    # My Apps
+    'courses',
+    'taxonomy',
+    'subscriptions',
+    'enrollments',
 ]
 
 MIDDLEWARE = [

@@ -24,6 +24,9 @@ from django.conf.urls.static import static
 urlpatterns = [
     path('api/v1/prag/', admin.site.urls),
     path('api/v1/auth/', include(('accounts.urls', 'auth'), namespace='auth')),
+    # path('api/v1/courses/', include(('courses.urls', 'courses'), namespace='courses')),
+    # path('api/v1/taxonomy', include(('taxonomy.urls', 'taxonomy'), namespace='taxonomy')),
+    # path('api/v1/subscriptions/', include(('subscriptions.urls', 'subscriptions'), namespace='subscriptions')),
     path('api/v1/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('api/v1/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),   
 ]
