@@ -66,19 +66,6 @@ services:
     env_file:
       - .env
 
-  phpmyadmin:
-    image: focker.ir/phpmyadmin
-    container_name: phpmyadmin_production
-    networks:
-      - prago_network
-    ports:
-      - "8188:80"
-    environment:
-      PMA_ARBITRARY: 1
-      UPLOAD_LIMIT: 300M
-    links:
-      - mariadb
-
   redis:
     image: redis:6.2
     expose:
