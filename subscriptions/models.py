@@ -1,8 +1,6 @@
 from django.db import models
 from django.contrib.auth import get_user_model
 
-from courses.models import Course
-
 
 User = get_user_model()
 
@@ -13,7 +11,7 @@ class SubscriptionPlan(models.Model):
     description = models.TextField(verbose_name='توضیحات اشتراک')
     price = models.DecimalField(max_digits=9, decimal_places=0, verbose_name='قیمت')
     duration_days = models.PositiveIntegerField(verbose_name='مدت زمان (روز)')
-    included_courses = models.ManyToManyField(Course, blank=True, related_name='subscription_plans', 
+    included_courses = models.ManyToManyField('courses.Course', blank=True, related_name='subscription_plans', 
                                            verbose_name='دوره‌های شامل شده')
     is_active = models.BooleanField(default=True, verbose_name='فعال')
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='تاریخ ایجاد')
