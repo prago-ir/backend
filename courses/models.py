@@ -100,7 +100,6 @@ class Episode(models.Model):
     )
 
     title = models.CharField(max_length=200, verbose_name='عنوان اپیزود')
-    slug = models.SlugField(max_length=200, unique=True, verbose_name='اسلاگ اپیزود')
     chapter = models.ForeignKey(Chapter, on_delete=models.CASCADE, related_name='episodes', verbose_name='فصل')
     course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name='episodes', verbose_name='دوره')
     type = models.CharField(max_length=10, choices=EPISODE_TYPES, default='video', verbose_name='نوع')

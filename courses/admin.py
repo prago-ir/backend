@@ -42,10 +42,9 @@ class EpisodeAdmin(admin.ModelAdmin):
     list_display = ['title', 'course', 'chapter', 'type', 'order', 'duration', 'file_size']
     list_filter = ['course', 'chapter', 'type']
     search_fields = ['title', 'description']
-    prepopulated_fields = {'slug': ('title',)}
     autocomplete_fields = ['course', 'chapter']
     fieldsets = [
-        ('Basic Information', {'fields': ['title', 'slug', 'course', 'chapter', 'type', 'order']}),
+        ('Basic Information', {'fields': ['title', 'course', 'chapter', 'type', 'order']}),
         ('Content', {'fields': ['thumbnail', 'content_url', 'description']}),
         ('Media Details', {'fields': ['duration', 'file_size', 'word_count']}),
     ]
