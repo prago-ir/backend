@@ -53,7 +53,7 @@ class MyUser(AbstractUser, PermissionsMixin):
     REQUIRED_FIELDS = []
 
     def __str__(self):
-        return self.full_name()
+        return self.username
     
     def full_name(self):
         return f"{self.first_name} {self.last_name}"
@@ -125,10 +125,10 @@ class Profile(models.Model):
     
     class Meta:
         verbose_name = 'پروفایل کاربر'
-        verbose_name_plural = 'پروفایل‌های کاربران'
+        verbose_name_plural = 'پروفایل کاربران'
         
     def full_name(self):
-        return f"{self.first_name} {self.last_name}"
+        return f"{self.user.first_name} {self.user.last_name}"
     
     def __str__(self):
         return f"Profile for {self.full_name()}"
@@ -143,8 +143,8 @@ class Teacher(models.Model):
     
 
     class Meta:
-        verbose_name = 'پروفایل مدرس'
-        verbose_name_plural = 'پروفایل‌های مدرسین'
+        verbose_name = 'مدرس'
+        verbose_name_plural = 'مدرسین'
         
     def full_name(self):
         return f"{self.first_name} {self.last_name}"
@@ -165,8 +165,8 @@ class Organizer(models.Model):
     verified = models.BooleanField(default=False, verbose_name='تایید شده')
 
     class Meta:
-        verbose_name = 'پروفایل برگزارکننده'
-        verbose_name_plural = 'پروفایل‌های برگزارکنندگان'
+        verbose_name = 'برگزارکننده'
+        verbose_name_plural = 'برگزارکنندگان'
     
     def __str__(self):
         return f"Organizer: {self.organization_name}"
@@ -180,8 +180,8 @@ class Author(models.Model):
     biography = models.TextField(blank=True, verbose_name='بیوگرافی')
     
     class Meta:
-        verbose_name = 'پروفایل نویسنده'
-        verbose_name_plural = 'پروفایل‌های نویسندگان'
+        verbose_name = 'نویسنده'
+        verbose_name_plural = 'نویسندگان'
         
     def full_name(self):
         return f"{self.first_name} {self.last_name}"
