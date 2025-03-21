@@ -32,11 +32,23 @@ class Chapter(models.Model):
 
 
 class Course(models.Model):
+    PUBLISHED_STATUS = (
+        ('draft', 'پیش‌نویس'),
+        ('published', 'منتشر شده'),
+        ('archived', 'بایگانی شده'),
+    )
+    
     cover_image = models.ImageField(verbose_name='تصویر دوره', upload_to='cover_image')
     title = models.CharField(max_length=100, verbose_name='تیتر دوره')
+    latin_title = models.CharField(max_length=100, verbose_name='تیتر لاتین دوره')
     slug = models.SlugField(max_length=100, unique=True, verbose_name='اسلاگ دوره')
     description = models.TextField(verbose_name='توضیحات کامل دوره')
     price = models.DecimalField(max_digits=9, decimal_places=0, verbose_name='قیمت')
+    
+    # Published status
+    status = models.CharField(max_length=20, choices=PUBLISHED_STATUS, default='draft', 
+                             verbose_name='وضعیت انتشار')
+    published_at = models.DateTimeField(null=True, blank=True, verbose_name='تاریخ انتشار')
     
     # Special offer fields
     special_offer_price = models.DecimalField(max_digits=9, decimal_places=0, null=True, blank=True, 
@@ -48,8 +60,8 @@ class Course(models.Model):
     total_hours = models.DecimalField(max_digits=5, decimal_places=1, verbose_name='مجموع ساعات')
 
     # Relationships
-    organizers = models.ManyToManyField(Organizer, related_name='organized_courses', verbose_name='برگزار کنندگان')
-    teachers = models.ManyToManyField(Teacher, related_name='teaching_courses', verbose_name='مدرسین')
+    organizers = models.ManyToManyField(Organizer, related_name='organized_courses', verbose_name='برگزار کننده‌ها')
+    teachers = models.ManyToManyField(Teacher, related_name='teaching_courses', verbose_name='مدرس‌ها')
     attributes = models.ManyToManyField(Attribute, related_name='courses', verbose_name='ویژگی‌ها')
     tags = models.ManyToManyField(Tag, related_name='courses', verbose_name='تگ‌ها')
     categories = models.ManyToManyField(Category, related_name='courses', verbose_name='دسته‌بندی‌ها')
@@ -63,6 +75,12 @@ class Course(models.Model):
     class Meta:
         verbose_name = 'دوره'
         verbose_name_plural = 'دوره‌ها'
+    
+    def save(self, *args, **kwargs):
+        # Set published_at when status changes to published
+        if self.status == 'published' and not self.published_at:
+            self.published_at = timezone.now()
+        super().save(*args, **kwargs)
         
     def is_free_for_user(self, user):
         """Check if the course is free for a specific user via their subscriptions"""
@@ -98,6 +116,12 @@ class Episode(models.Model):
         ('text', 'متن'),
         ('quiz', 'آزمون'),
     )
+    
+    PUBLISHED_STATUS = (
+        ('draft', 'پیش‌نویس'),
+        ('published', 'منتشر شده'),
+        ('archived', 'بایگانی شده'),
+    )
 
     title = models.CharField(max_length=200, verbose_name='عنوان اپیزود')
     chapter = models.ForeignKey(Chapter, on_delete=models.CASCADE, related_name='episodes', verbose_name='فصل')
@@ -107,6 +131,11 @@ class Episode(models.Model):
                                   verbose_name='تصویر بند انگشتی')
     content_url = models.URLField(verbose_name='آدرس محتوا')
     description = models.TextField(blank=True, verbose_name='توضیحات')
+    
+    # Published status
+    status = models.CharField(max_length=20, choices=PUBLISHED_STATUS, default='draft', 
+                             verbose_name='وضعیت انتشار')
+    published_at = models.DateTimeField(null=True, blank=True, verbose_name='تاریخ انتشار')
 
     # Duration field for videos and audio (stored as DurationField)
     duration = models.DurationField(blank=True, null=True, verbose_name='مدت زمان')
@@ -129,6 +158,12 @@ class Episode(models.Model):
         verbose_name_plural = 'اپیزودها'
         ordering = ['chapter', 'order']
         unique_together = ['course', 'order']
+    
+    def save(self, *args, **kwargs):
+        # Set published_at when status changes to published
+        if self.status == 'published' and not self.published_at:
+            self.published_at = timezone.now()
+        super().save(*args, **kwargs)
 
     def get_formatted_file_size(self):
         """Return human-readable file size"""

@@ -16,21 +16,23 @@ class ChapterAdmin(admin.ModelAdmin):
 class EpisodeInline(admin.TabularInline):
     model = Episode
     extra = 1
-    fields = ['title', 'type', 'order', 'duration', 'file_size']
+    fields = ['title', 'type', 'order', 'duration', 'file_size', 'status']
 
 
 class CourseAdmin(admin.ModelAdmin):
-    list_display = ['title', 'slug', 'price', 'special_offer_price', 'has_active_special_offer', 'total_hours', 'created_at']
-    list_filter = ['categories', 'tags', 'teachers', 'organizers']
-    search_fields = ['title', 'description']
-    prepopulated_fields = {'slug': ('title',)}
+    list_display = ['title', 'latin_title', 'status', 'published_at', 'price', 'special_offer_price', 'has_active_special_offer', 'total_hours', 'created_at']
+    list_filter = ['status', 'categories', 'tags', 'teachers', 'organizers']
+    search_fields = ['title', 'latin_title', 'description']
+    prepopulated_fields = {'slug': ('latin_title',)}
     filter_horizontal = ['organizers', 'teachers', 'attributes', 'tags', 'categories']
     fieldsets = [
-        ('Course Information', {'fields': ['cover_image', 'title', 'slug', 'description', 'intro_video_link', 'total_hours']}),
+        ('Course Information', {'fields': ['cover_image', 'title', 'latin_title', 'slug', 'description', 'intro_video_link', 'total_hours']}),
+        ('Publication', {'fields': ['status', 'published_at']}),
         ('Pricing', {'fields': ['price', 'special_offer_price', 'special_offer_start_date', 'special_offer_end_date']}),
         ('Relationships', {'fields': ['organizers', 'teachers', 'attributes', 'tags', 'categories']}),
     ]
     inlines = [EpisodeInline]
+    readonly_fields = ['published_at']
     
     def has_active_special_offer(self, obj):
         return obj.has_active_special_offer()
@@ -39,15 +41,17 @@ class CourseAdmin(admin.ModelAdmin):
 
 
 class EpisodeAdmin(admin.ModelAdmin):
-    list_display = ['title', 'course', 'chapter', 'type', 'order', 'duration', 'file_size']
-    list_filter = ['course', 'chapter', 'type']
+    list_display = ['title', 'course', 'chapter', 'type', 'status', 'published_at', 'order', 'duration', 'file_size']
+    list_filter = ['status', 'course', 'chapter', 'type']
     search_fields = ['title', 'description']
     autocomplete_fields = ['course', 'chapter']
     fieldsets = [
         ('Basic Information', {'fields': ['title', 'course', 'chapter', 'type', 'order']}),
+        ('Publication', {'fields': ['status', 'published_at']}),
         ('Content', {'fields': ['thumbnail', 'content_url', 'description']}),
         ('Media Details', {'fields': ['duration', 'file_size', 'word_count']}),
     ]
+    readonly_fields = ['published_at']
 
 
 # Register models
