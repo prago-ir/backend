@@ -15,6 +15,7 @@ from pathlib import Path
 from datetime import timedelta
 import time
 import logging
+import uuid
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -56,6 +57,7 @@ INSTALLED_APPS = [
     'taxonomy',
     'subscriptions',
     'enrollments',
+    'billing',
 ]
 
 MIDDLEWARE = [
@@ -274,3 +276,8 @@ LOGGING = {
         },
     },
 }
+
+
+# Zarinpal Configuration
+ZARINPAL_MERCHANT_ID = os.environ.get('ZARINPAL_MERCHANT_ID', uuid.uuid4())
+ZARINPAL_API_BASE = os.environ.get('ZARINPAL_API_BASE', 'https://sandbox.zarinpal.com/')
