@@ -1,51 +1,64 @@
 #!/bin/bash
 set -e
 
-# Function to check if MySQL is available
-function mysql_ready() {
-    python << END
-import sys
-import MySQLdb
-try:
-    conn = MySQLdb.connect(
-        host="${DB_HOST}",
-        port=int("${DB_PORT}"),
-        user="${DB_USER}",
-        passwd="${DB_PASSWORD}",
-        db="${DB_NAME}"
-    )
-    sys.exit(0)
-except Exception as e:
-    print(f"Error connecting to MySQL: {e}")
-    sys.exit(1)
-END
-}
+echo "Starting entrypoint script..."
 
-# Wait for MySQL database to be ready
-echo "Waiting for MySQL database..."
-until mysql_ready; do
-  echo "MySQL is unavailable - sleeping (5s)"
-  sleep 5
-done
-echo "MySQL database is available!"
+# Wait for database to be ready
+# echo "Waiting for database to be ready..."
+# python << END
+# import sys
+# import time
+# import MySQLdb
 
-# Create necessary directories if they don't exist
-echo "Creating necessary directories..."
-mkdir -p /app/assets_served
-mkdir -p /app/media
+# for i in range(30):
+#     try:
+#         MySQLdb.connect(
+#             host="${DB_HOST}",
+#             user="${DB_USER}",
+#             passwd="${DB_PASSWORD}",
+#             db="${DB_NAME}"
+#         )
+#         print("Database is ready!")
+#         break
+#     except MySQLdb.OperationalError:
+#         print("Database not ready yet, waiting...")
+#         time.sleep(1)
+# else:
+#     print("Could not connect to database after 30 attempts")
+#     sys.exit(1)
+# END
 
-# Set permissions
-chmod -R 755 /app/assets_served
-chmod -R 755 /app/media
+# Apply core migrations first
+#echo "Running contenttypes migrations..."
+#python manage.py migrate contenttypes
+#
+#echo "Running auth migrations..."
+#python manage.py migrate auth
+#
+#echo "Running admin migrations..."
+#python manage.py migrate admin
+#
+#echo "Running sessions migrations..."
+#python manage.py migrate sessions
+#
+## Apply migrations
+#echo "Running the rest of migrations..."
+#python manage.py migrate
 
 # Collect static files
 echo "Collecting static files..."
 python manage.py collectstatic --noinput --clear
 
-# Apply database migrations
-echo "Applying database migrations..."
-python manage.py migrate
+echo "Application initialization complete."
+echo "Starting application..."
+exec "$@"
 
-# Start the application
+# Collect static files
+echo "Collecting static files..."
+python manage.py collectstatic --noinput --clear
+
+set -e  # Return to exit on error
+
+echo "Application initialization complete."
 echo "Starting application..."
 exec "$@"
