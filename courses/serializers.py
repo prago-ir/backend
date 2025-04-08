@@ -40,12 +40,13 @@ class ChapterSerializer(serializers.ModelSerializer):
 class CourseSerializer(serializers.ModelSerializer):
     teachers = TeacherSerializer(many=True, read_only=True)
     categories = CategorySerializer(many=True, read_only=True)
+    attributes = AttributeSerializer(many=True, read_only=True)
     current_price = serializers.SerializerMethodField()
     has_special_offer = serializers.SerializerMethodField()
     
     class Meta:
         model = Course
-        fields = ['id', 'title', 'latin_title', 'slug', 'cover_image', 'price', 
+        fields = ['id', 'title', 'latin_title', 'slug', 'cover_image', 'description','price', 
                   'current_price', 'has_special_offer', 'special_offer_price',
                   'total_hours', 'published_at', 'teachers', 'categories', 'status']
     
