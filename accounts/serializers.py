@@ -24,12 +24,12 @@ class OTPSerializer(serializers.ModelSerializer):
 class OrganizerSerializer(serializers.ModelSerializer):
     class Meta:
         model = Organizer
-        fields = ['id', 'name', 'logo', 'bio']
+        fields = ['id', 'organization_name', 'organization_logo', 'organization_description']
 
 
 class TeacherSerializer(serializers.ModelSerializer):
     class Meta:
         model = Teacher
-        fields = ['id', 'name', 'avatar', 'bio']
+        fields = ['id', 'full_name', 'avatar', 'biography']
 
 

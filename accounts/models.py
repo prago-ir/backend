@@ -139,6 +139,7 @@ class Teacher(models.Model):
     first_name = models.CharField(max_length=50, blank=True, verbose_name="نام مدرس")
     last_name = models.CharField(max_length=50, blank=True, verbose_name="نام خانوادگی مدرس")
     slug = models.SlugField(max_length=50, unique=True, verbose_name='اسلاگ مدرس')
+    avatar = models.ImageField(upload_to='author_avatars/', blank=True, null=True, verbose_name='تصویر مدرس')
     biography = models.TextField(blank=True, verbose_name='بیوگرافی مدرس')
     
 
@@ -177,6 +178,7 @@ class Author(models.Model):
     first_name = models.CharField(max_length=50, blank=True, verbose_name="نام مدرس")
     last_name = models.CharField(max_length=50, blank=True, verbose_name="نام خانوادگی مدرس")
     slug = models.SlugField(max_length=50, unique=True, verbose_name='اسلاگ مدرس')
+    avatar = models.ImageField(upload_to='author_avatars/', blank=True, null=True, verbose_name='تصویر نویسنده')
     biography = models.TextField(blank=True, verbose_name='بیوگرافی')
     
     class Meta:

@@ -12,7 +12,7 @@ def create_user_profile(sender, instance, created, **kwargs):
 @receiver(post_save, sender=Teacher)
 def add_to_teacher_group(sender, instance, created, **kwargs):
     """Add user to the Teacher group when a Teacher is created"""
-    if created:
+    if created and instance.user:
         teacher_group, _ = Group.objects.get_or_create(name='Teachers')
         instance.user.groups.add(teacher_group)
 
@@ -26,7 +26,7 @@ def remove_from_teacher_group(sender, instance, **kwargs):
 @receiver(post_save, sender=Organizer)
 def add_to_organizer_group(sender, instance, created, **kwargs):
     """Add user to the Organizer group when an Organizer is created"""
-    if created:
+    if created and instance.user:
         organizer_group, _ = Group.objects.get_or_create(name='Organizers')
         instance.user.groups.add(organizer_group)
 
@@ -40,7 +40,7 @@ def remove_from_organizer_group(sender, instance, **kwargs):
 @receiver(post_save, sender=Author)
 def add_to_author_group(sender, instance, created, **kwargs):
     """Add user to the Author group when an Author is created"""
-    if created:
+    if created and instance.user:
         author_group, _ = Group.objects.get_or_create(name='Authors')
         instance.user.groups.add(author_group)
 
