@@ -295,178 +295,178 @@ class Transaction(models.Model):
             self.save(update_fields=['status', 'description'])
 
 
-class Cart(models.Model):
-    """
-    Shopping cart for users to collect courses or subscription plans before checkout
-    """
-    user = models.OneToOneField('accounts.MyUser', on_delete=models.CASCADE, related_name='cart')
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
+# class Cart(models.Model):
+#     """
+#     Shopping cart for users to collect courses or subscription plans before checkout
+#     """
+#     user = models.OneToOneField('accounts.MyUser', on_delete=models.CASCADE, related_name='cart')
+#     created_at = models.DateTimeField(auto_now_add=True)
+#     updated_at = models.DateTimeField(auto_now=True)
 
-    # Optional: applied coupon
-    coupon = models.ForeignKey(Coupon, on_delete=models.SET_NULL, null=True, blank=True, related_name='carts')
+#     # Optional: applied coupon
+#     coupon = models.ForeignKey(Coupon, on_delete=models.SET_NULL, null=True, blank=True, related_name='carts')
 
-    class Meta:
-        verbose_name = 'سبد خرید'
-        verbose_name_plural = 'سبدهای خرید'
+#     class Meta:
+#         verbose_name = 'سبد خرید'
+#         verbose_name_plural = 'سبدهای خرید'
 
-    def __str__(self):
-        return f"Cart for {self.user.username}"
+#     def __str__(self):
+#         return f"Cart for {self.user.username}"
 
-    @property
-    def total_items(self):
-        """Count total items in cart"""
-        return self.items.count()
+#     @property
+#     def total_items(self):
+#         """Count total items in cart"""
+#         return self.items.count()
 
-    @property
-    def subtotal(self):
-        """Calculate cart subtotal before discounts"""
-        return sum(item.get_price() for item in self.items.all())
+#     @property
+#     def subtotal(self):
+#         """Calculate cart subtotal before discounts"""
+#         return sum(item.get_price() for item in self.items.all())
 
-    @property
-    def discount_amount(self):
-        """Calculate discount amount if coupon is applied"""
-        if not self.coupon or not self.coupon.is_valid:
-            return 0
+#     @property
+#     def discount_amount(self):
+#         """Calculate discount amount if coupon is applied"""
+#         if not self.coupon or not self.coupon.is_valid:
+#             return 0
 
-        return self.subtotal - self.coupon.apply_discount(self.subtotal)
+#         return self.subtotal - self.coupon.apply_discount(self.subtotal)
 
-    @property
-    def total(self):
-        """Calculate final total after discounts"""
-        return self.subtotal - self.discount_amount
+#     @property
+#     def total(self):
+#         """Calculate final total after discounts"""
+#         return self.subtotal - self.discount_amount
 
-    def clear(self):
-        """Remove all items from cart"""
-        self.items.all().delete()
-        self.coupon = None
-        self.save(update_fields=['coupon'])
+#     def clear(self):
+#         """Remove all items from cart"""
+#         self.items.all().delete()
+#         self.coupon = None
+#         self.save(update_fields=['coupon'])
 
-    def add_course(self, course, quantity=1):
-        """Add a course to the cart"""
-        cart_item, created = CartItem.objects.get_or_create(
-            cart=self,
-            content_type=ContentType.objects.get_for_model(course),
-            object_id=course.id,
-            defaults={'quantity': quantity}
-        )
+#     def add_course(self, course, quantity=1):
+#         """Add a course to the cart"""
+#         cart_item, created = CartItem.objects.get_or_create(
+#             cart=self,
+#             content_type=ContentType.objects.get_for_model(course),
+#             object_id=course.id,
+#             defaults={'quantity': quantity}
+#         )
 
-        if not created:
-            cart_item.quantity += quantity
-            cart_item.save()
+#         if not created:
+#             cart_item.quantity += quantity
+#             cart_item.save()
 
-        return cart_item
+#         return cart_item
 
-    def add_subscription(self, subscription_plan, quantity=1):
-        """Add a subscription plan to the cart"""
-        cart_item, created = CartItem.objects.get_or_create(
-            cart=self,
-            content_type=ContentType.objects.get_for_model(subscription_plan),
-            object_id=subscription_plan.id,
-            defaults={'quantity': quantity}
-        )
+#     def add_subscription(self, subscription_plan, quantity=1):
+#         """Add a subscription plan to the cart"""
+#         cart_item, created = CartItem.objects.get_or_create(
+#             cart=self,
+#             content_type=ContentType.objects.get_for_model(subscription_plan),
+#             object_id=subscription_plan.id,
+#             defaults={'quantity': quantity}
+#         )
 
-        if not created:
-            cart_item.quantity += quantity
-            cart_item.save()
+#         if not created:
+#             cart_item.quantity += quantity
+#             cart_item.save()
 
-        return cart_item
+#         return cart_item
 
-    def remove_item(self, item_id):
-        """Remove an item from the cart"""
-        try:
-            item = self.items.get(id=item_id)
-            item.delete()
-            return True
-        except CartItem.DoesNotExist:
-            return False
+#     def remove_item(self, item_id):
+#         """Remove an item from the cart"""
+#         try:
+#             item = self.items.get(id=item_id)
+#             item.delete()
+#             return True
+#         except CartItem.DoesNotExist:
+#             return False
 
-    def checkout(self):
-        """Convert cart to an order"""
-        from django.db import transaction
+#     def checkout(self):
+#         """Convert cart to an order"""
+#         from django.db import transaction
 
-        if self.total_items == 0:
-            raise ValueError("Cannot checkout an empty cart")
+#         if self.total_items == 0:
+#             raise ValueError("Cannot checkout an empty cart")
 
-        with transaction.atomic():
-            # Create a new order
-            order = Order(
-                user=self.user,
-                total_amount=self.subtotal,
-                discount_amount=self.discount_amount,
-                final_amount=self.total,
-                coupon=self.coupon
-            )
+#         with transaction.atomic():
+#             # Create a new order
+#             order = Order(
+#                 user=self.user,
+#                 total_amount=self.subtotal,
+#                 discount_amount=self.discount_amount,
+#                 final_amount=self.total,
+#                 coupon=self.coupon
+#             )
 
-            # Determine order type based on cart contents
-            if self.items.count() == 1:
-                item = self.items.first()
-                if item.content_type.model == 'course':
-                    order.order_type = 'course'
-                    order.course = item.content_object
-                elif item.content_type.model == 'subscriptionplan':
-                    order.order_type = 'subscription'
-                    order.subscription_plan = item.content_object
-            else:
-                # If multiple items, it's a multi-item order
-                order.order_type = 'multi'
+#             # Determine order type based on cart contents
+#             if self.items.count() == 1:
+#                 item = self.items.first()
+#                 if item.content_type.model == 'course':
+#                     order.order_type = 'course'
+#                     order.course = item.content_object
+#                 elif item.content_type.model == 'subscriptionplan':
+#                     order.order_type = 'subscription'
+#                     order.subscription_plan = item.content_object
+#             else:
+#                 # If multiple items, it's a multi-item order
+#                 order.order_type = 'multi'
 
-            order.save()
+#             order.save()
 
-            # Create order items for each cart item
-            for cart_item in self.items.all():
-                OrderItem.objects.create(
-                    order=order,
-                    content_type=cart_item.content_type,
-                    object_id=cart_item.object_id,
-                    quantity=cart_item.quantity,
-                    unit_price=cart_item.get_unit_price(),
-                    total_price=cart_item.get_price()
-                )
+#             # Create order items for each cart item
+#             for cart_item in self.items.all():
+#                 OrderItem.objects.create(
+#                     order=order,
+#                     content_type=cart_item.content_type,
+#                     object_id=cart_item.object_id,
+#                     quantity=cart_item.quantity,
+#                     unit_price=cart_item.get_unit_price(),
+#                     total_price=cart_item.get_price()
+#                 )
 
-            # Record coupon usage if applicable
-            if self.coupon:
-                self.coupon.record_usage()
+#             # Record coupon usage if applicable
+#             if self.coupon:
+#                 self.coupon.record_usage()
 
-            # Clear the cart
-            self.clear()
+#             # Clear the cart
+#             self.clear()
 
-            return order
+#             return order
 
 
-class CartItem(models.Model):
-    """
-    Items in a shopping cart using generic relations to support different types of items
-    """
-    cart = models.ForeignKey(Cart, on_delete=models.CASCADE, related_name='items')
+# class CartItem(models.Model):
+#     """
+#     Items in a shopping cart using generic relations to support different types of items
+#     """
+#     cart = models.ForeignKey(Cart, on_delete=models.CASCADE, related_name='items')
 
-    # Generic relation to course or subscription plan
-    content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE)
-    object_id = models.PositiveIntegerField()
-    content_object = GenericForeignKey('content_type', 'object_id')
+#     # Generic relation to course or subscription plan
+#     content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE)
+#     object_id = models.PositiveIntegerField()
+#     content_object = GenericForeignKey('content_type', 'object_id')
 
-    quantity = models.PositiveIntegerField(default=1)
-    added_at = models.DateTimeField(auto_now_add=True)
+#     quantity = models.PositiveIntegerField(default=1)
+#     added_at = models.DateTimeField(auto_now_add=True)
 
-    class Meta:
-        verbose_name = 'آیتم سبد خرید'
-        verbose_name_plural = 'آیتم‌های سبد خرید'
-        unique_together = ['cart', 'content_type', 'object_id']
+#     class Meta:
+#         verbose_name = 'آیتم سبد خرید'
+#         verbose_name_plural = 'آیتم‌های سبد خرید'
+#         unique_together = ['cart', 'content_type', 'object_id']
 
-    def __str__(self):
-        return f"{self.content_object} in cart for {self.cart.user.username}"
+#     def __str__(self):
+#         return f"{self.content_object} in cart for {self.cart.user.username}"
 
-    def get_unit_price(self):
-        """Get the unit price of the item (handling special offers)"""
-        if hasattr(self.content_object, 'special_offer_price') and self.content_object.special_offer_price:
-            # Check if special offer is valid
-            now = timezone.now()
-            if (self.content_object.special_offer_start_date and
-                self.content_object.special_offer_start_date <= now):
-                return self.content_object.special_offer_price
+#     def get_unit_price(self):
+#         """Get the unit price of the item (handling special offers)"""
+#         if hasattr(self.content_object, 'special_offer_price') and self.content_object.special_offer_price:
+#             # Check if special offer is valid
+#             now = timezone.now()
+#             if (self.content_object.special_offer_start_date and
+#                 self.content_object.special_offer_start_date <= now):
+#                 return self.content_object.special_offer_price
 
-        return self.content_object.price
+#         return self.content_object.price
 
-    def get_price(self):
-        """Calculate total price for this item"""
-        return self.get_unit_price() * self.quantity
+#     def get_price(self):
+#         """Calculate total price for this item"""
+#         return self.get_unit_price() * self.quantity
