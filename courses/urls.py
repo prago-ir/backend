@@ -1,13 +1,13 @@
 from django.urls import path
 from .views import (
-    CourseListView, CourseDetailView, HomeCoursesView,
+    CourseListView, CourseDetailView, LatestCoursesView,
     OwnedCoursesView, DashboardCourseDetailView, 
     CourseEnrollmentView, UpdateProgressView
 )
 
 urlpatterns = [
     # Public endpoints
-    path('home-courses/', HomeCoursesView.as_view(), name='home-courses'),
+    path('latest-courses/', LatestCoursesView.as_view(), name='home-courses'),
     path('courses/', CourseListView.as_view(), name='course-list'),
     path('courses/<slug:slug>/', CourseDetailView.as_view(), name='course-detail'),
     

@@ -10,7 +10,7 @@ from .models import Course, Episode
 from .serializers import CourseSerializer, CourseDetailSerializer, EpisodeSerializer
 from enrollments.models import Enrollment, UserProgress
 
-class HomeCoursesView(APIView):
+class LatestCoursesView(APIView):
     """View to get the last six published courses for home page"""
     
     def get(self, request):

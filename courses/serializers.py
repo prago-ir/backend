@@ -48,7 +48,7 @@ class CourseSerializer(serializers.ModelSerializer):
         model = Course
         fields = ['id', 'title', 'latin_title', 'slug', 'cover_image', 'description','price', 
                   'current_price', 'has_special_offer', 'special_offer_price',
-                  'total_hours', 'published_at', 'teachers', 'categories', 'status']
+                  'total_hours', 'published_at', 'teachers', 'categories', 'attributes','status']
     
     def get_current_price(self, obj):
         return obj.get_current_price()
