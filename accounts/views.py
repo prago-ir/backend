@@ -12,8 +12,23 @@ from .serializers import MyUserSerializer
 from .tasks import send_otp_email, send_otp_sms
 
 
-class RequestOTPView(APIView):
+# Add this new API view to your existing views.py file
+
+class UserInfoView(APIView):
     permission_classes = [IsAuthenticated]
+    
+    def get(self, request):
+        """
+        Return the authenticated user's information.
+        This endpoint requires the user to be authenticated via session or token.
+        """
+        # Serialize the current user's data
+        serializer = MyUserSerializer(request.user)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class RequestOTPView(APIView):
+    # permission_classes = [IsAuthenticated]
 
     def post(self, request):
         identifier = request.data.get('identifier')
@@ -51,7 +66,7 @@ class RequestOTPView(APIView):
 
 
 class VerifyOTPView(APIView):
-    permission_classes = [IsAuthenticated]
+    # permission_classes = [IsAuthenticated]
     
     def post(self, request):
         otp = request.data.get('otp')
