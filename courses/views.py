@@ -23,6 +23,20 @@ class LatestCoursesView(APIView):
         serializer = CourseSerializer(queryset, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
+class PopularCoursesView(APIView):
+    """View to get the most popular courses"""
+    
+    def get(self, request):
+        # Get popular courses ordered by enrollment count
+        queryset = Course.objects.filter(
+            status='published',
+            published_at__lte=timezone.now()
+        ).annotate(enrollment_count=Count('enrollments')).order_by('-enrollment_count')[:6]
+        
+        serializer = CourseSerializer(queryset, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+    
+
 
 class CourseListView(APIView):
     def get(self, request):

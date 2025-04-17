@@ -2,12 +2,13 @@ from django.urls import path
 from .views import (
     CourseListView, CourseDetailView, LatestCoursesView,
     OwnedCoursesView, DashboardCourseDetailView, 
-    CourseEnrollmentView, UpdateProgressView
+    CourseEnrollmentView, UpdateProgressView, PopularCoursesView
 )
 
 urlpatterns = [
     # Public endpoints
     path('latest-courses/', LatestCoursesView.as_view(), name='home-courses'),
+    path('popular-courses/', PopularCoursesView.as_view(), name='popular-courses'),
     path('courses/', CourseListView.as_view(), name='course-list'),
     path('courses/<slug:slug>/', CourseDetailView.as_view(), name='course-detail'),
     
