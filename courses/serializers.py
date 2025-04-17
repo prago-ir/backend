@@ -39,6 +39,7 @@ class ChapterSerializer(serializers.ModelSerializer):
 
 class CourseSerializer(serializers.ModelSerializer):
     teachers = TeacherSerializer(many=True, read_only=True)
+    organizers = OrganizerSerializer(many=True, read_only=True)
     categories = CategorySerializer(many=True, read_only=True)
     attributes = AttributeSerializer(many=True, read_only=True)
     current_price = serializers.SerializerMethodField()
@@ -48,7 +49,7 @@ class CourseSerializer(serializers.ModelSerializer):
         model = Course
         fields = ['id', 'title', 'latin_title', 'slug', 'cover_image', 'description','price', 
                   'current_price', 'has_special_offer', 'special_offer_price',
-                  'total_hours', 'published_at', 'teachers', 'categories', 'attributes','status']
+                  'total_hours', 'published_at', 'teachers', 'organizers', 'categories', 'attributes','status']
     
     def get_current_price(self, obj):
         return obj.get_current_price()
