@@ -22,7 +22,7 @@ from django.conf import settings
 from django.conf.urls.static import static
 
 urlpatterns = [
-    path('api/v1/prag/', admin.site.urls),
+    path('prag/', admin.site.urls),
     path('api/v1/auth/', include(('accounts.urls', 'auth'), namespace='auth')),
     path('api/v1/courses/', include(('courses.urls', 'courses'), namespace='courses')),
     # path('api/v1/taxonomy', include(('taxonomy.urls', 'taxonomy'), namespace='taxonomy')),
