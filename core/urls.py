@@ -27,8 +27,8 @@ urlpatterns = [
     path('api/v1/courses/', include(('courses.urls', 'courses'), namespace='courses')),
     # path('api/v1/taxonomy', include(('taxonomy.urls', 'taxonomy'), namespace='taxonomy')),
     # path('api/v1/subscriptions/', include(('subscriptions.urls', 'subscriptions'), namespace='subscriptions')),
-    path('api/v1/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
-    path('api/v1/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),   
+    path('api/v1/auth/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
+    path('api/v1/auth/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),   
 ]
 
 # Add static file serving for development
