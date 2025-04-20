@@ -7,16 +7,25 @@ class AttributeAdmin(admin.ModelAdmin):
     search_fields = ['name', 'value']
 
 
-class ChapterAdmin(admin.ModelAdmin):
-    list_display = ['number', 'title']
-    list_filter = ['number']
-    search_fields = ['title', 'description']
+
+class ChapterInline(admin.TabularInline):
+    model = Chapter
+    extra = 1
+    fields = ['course','number', 'title', 'description']
 
 
 class EpisodeInline(admin.TabularInline):
     model = Episode
     extra = 1
     fields = ['title', 'type', 'order', 'duration', 'file_size', 'status']
+
+
+class ChapterAdmin(admin.ModelAdmin):
+    list_display = ['number', 'title']
+    list_filter = ['number']
+    search_fields = ['title', 'description']
+    
+    inlines = [EpisodeInline]
 
 
 class CourseAdmin(admin.ModelAdmin):
@@ -31,7 +40,7 @@ class CourseAdmin(admin.ModelAdmin):
         ('Pricing', {'fields': ['price', 'special_offer_price', 'special_offer_start_date', 'special_offer_end_date']}),
         ('Relationships', {'fields': ['organizers', 'teachers', 'attributes', 'tags', 'categories']}),
     ]
-    inlines = [EpisodeInline]
+    inlines = [ChapterInline]
     readonly_fields = ['published_at']
     
     def has_active_special_offer(self, obj):

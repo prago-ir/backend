@@ -7,10 +7,10 @@ from .views import (
 
 urlpatterns = [
     # Public endpoints
-    path('latest-courses/', LatestCoursesView.as_view(), name='home-courses'),
-    path('popular-courses/', PopularCoursesView.as_view(), name='popular-courses'),
-    path('courses/', CourseListView.as_view(), name='course-list'),
-    path('courses/<slug:slug>/', CourseDetailView.as_view(), name='course-detail'),
+    path('etc/latest-courses/', LatestCoursesView.as_view(), name='home-courses'),
+    path('etc/popular-courses/', PopularCoursesView.as_view(), name='popular-courses'),
+    path('', CourseListView.as_view(), name='course-list'),
+    path('<slug:slug>/', CourseDetailView.as_view(), name='course-detail'),
     
     # Authenticated user endpoints
     path('my-courses/', OwnedCoursesView.as_view(), name='owned-courses'),

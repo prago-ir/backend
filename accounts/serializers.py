@@ -30,6 +30,6 @@ class OrganizerSerializer(serializers.ModelSerializer):
 class TeacherSerializer(serializers.ModelSerializer):
     class Meta:
         model = Teacher
-        fields = ['id', 'full_name', 'avatar', 'biography']
+        fields = ['id', 'full_name', 'avatar', 'biography', 'number_of_courses']
 
 

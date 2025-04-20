@@ -150,6 +150,9 @@ class Teacher(models.Model):
     def full_name(self):
         return f"{self.first_name} {self.last_name}"
     
+    def number_of_courses(self):
+        return self.teaching_courses.count()
+    
     def __str__(self):
         return f"Teacher: {self.full_name()}"
 

@@ -19,6 +19,7 @@ class Attribute(models.Model):
 
 
 class Chapter(models.Model):
+    course = models.ForeignKey('Course', on_delete=models.CASCADE, related_name='chapters', verbose_name='دوره')
     number = models.PositiveSmallIntegerField(verbose_name='شماره فصل')
     title = models.CharField(max_length=100, verbose_name='عنوان فصل')
     description = models.TextField(blank=True, verbose_name='توضیحات فصل')

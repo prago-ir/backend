@@ -63,6 +63,8 @@ class CourseDetailSerializer(serializers.ModelSerializer):
     organizers = OrganizerSerializer(many=True, read_only=True)
     categories = CategorySerializer(many=True, read_only=True)
     tags = TagSerializer(many=True, read_only=True)
+    attributes = AttributeSerializer(many=True, read_only=True)
+    chapters = ChapterSerializer(many=True, read_only=True)
     current_price = serializers.SerializerMethodField()
     has_special_offer = serializers.SerializerMethodField()
     is_enrolled = serializers.SerializerMethodField()
@@ -73,7 +75,7 @@ class CourseDetailSerializer(serializers.ModelSerializer):
                   'price', 'current_price', 'has_special_offer', 'special_offer_price',
                   'special_offer_start_date', 'special_offer_end_date', 'intro_video_link',
                   'total_hours', 'published_at', 'teachers', 'organizers', 
-                  'categories', 'tags', 'status', 'is_enrolled']
+                  'categories', 'tags', 'attributes', 'chapters', 'status', 'is_enrolled']
     
     def get_current_price(self, obj):
         return obj.get_current_price()
