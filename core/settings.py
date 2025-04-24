@@ -74,8 +74,12 @@ MIDDLEWARE = [
 
 CORS_ALLOWED_ORIGINS = [
     'http://localhost',
-    'http://frontend'             
+    'http://frontend',
+    'http://api.localhost',
+    'http://127.0.0.1:3000',
+    'http://localhost:3000'             
 ]
+
 
 CORS_ALLOW_CREDENTIALS = True
 
@@ -213,14 +217,22 @@ SIMPLE_JWT = {
     'AUTH_HEADER_TYPES': ('Bearer',),
 }
 
-CELERY_TIMEZONE = "Asia/Tehran"
-REDIS_HOST = os.environ.get('REDIS_HOST', '127.0.0.1')
-REDIS_PORT = os.environ.get('REDIS_PORT', '6379')
-CELERY_BROKER_URL = os.environ.get('CELERY_BROKER_URL', f'redis://{REDIS_HOST}:{REDIS_PORT}/0')
-CELERY_RESULT_BACKEND = f'redis://{REDIS_HOST}:{REDIS_PORT}/0'  # Use Redis for result backend too
-CELERY_ACCEPT_CONTENT = ['json']
-CELERY_TASK_SERIALIZER = 'json'
-CELERY_RESULT_SERIALIZER = 'json'
+# Celery Configuration Options
+CELERY_BROKER_URL = 'redis://redis:6379'
+CELERY_RESULT_BACKEND = 'redis://redis:6379'
+CELERY_TIMEZONE = 'Asia/Tehran'
+CELERYD_SOFT_TIME_LIMIT = 20
+CELERY_TASK_TRACK_STARTED = True
+CELERYD_TIME_LIMIT = 30 * 60
+CELERY_TASK_MAX_RETRIES = 3
+# CELERY_TIMEZONE = "Asia/Tehran"
+# REDIS_HOST = os.environ.get('REDIS_HOST', '127.0.0.1')
+# REDIS_PORT = os.environ.get('REDIS_PORT', '6379')
+# CELERY_BROKER_URL = os.environ.get('CELERY_BROKER_URL', f'redis://{REDIS_HOST}:{REDIS_PORT}')
+# CELERY_RESULT_BACKEND = f'redis://{REDIS_HOST}:{REDIS_PORT}/0'  # Use Redis for result backend too
+# CELERY_ACCEPT_CONTENT = ['json']
+# CELERY_TASK_SERIALIZER = 'json'
+# CELERY_RESULT_SERIALIZER = 'json'
 
 # Email Configuration
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'

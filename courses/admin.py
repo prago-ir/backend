@@ -17,12 +17,12 @@ class ChapterInline(admin.TabularInline):
 class EpisodeInline(admin.TabularInline):
     model = Episode
     extra = 1
-    fields = ['title', 'type', 'order', 'duration', 'file_size', 'status']
+    fields = ['course', 'title', 'type', 'content_url','order', 'duration', 'file_size', 'status']
 
 
 class ChapterAdmin(admin.ModelAdmin):
-    list_display = ['number', 'title']
-    list_filter = ['number']
+    list_display = [ 'title', 'number', 'course']
+    list_filter = ['course']
     search_fields = ['title', 'description']
     
     inlines = [EpisodeInline]

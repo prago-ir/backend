@@ -100,6 +100,27 @@ class CourseDetailView(APIView):
             published_at__lte=timezone.now()
         )
         
+        chapters_data = {}
+        episodes = Episode.objects.filter(course=course, status='published').order_by('chapter__number', 'order')
+        
+        for episode in episodes:
+            chapter_id = episode.chapter.id
+            
+            episode_serializer = EpisodeSerializer(episode, context={'request': request})
+
+            if chapter_id not in chapters_data:
+                chapters_data[chapter_id] = {
+                    'id': episode.chapter.id,
+                    'title': episode.chapter.title,
+                    'number': episode.chapter.number,
+                    'episodes': []
+                }
+                
+            chapters_data[chapter_id]['episodes'].append(episode_serializer.data)
+                
+            chapter_list = list(chapters_data.values())
+            chapter_list.sort(key=lambda x: x['number'])
+               
         # Get related courses (from same category, same teacher, or similar tags)
         related_courses = Course.objects.filter(
             status='published',
@@ -132,8 +153,13 @@ class CourseDetailView(APIView):
         # Serialize related courses
         related_serializer = CourseSerializer(related_courses, many=True)
         
+        course_response_data = serializer.data
+        course_response_data.update({
+            'chapters': chapter_list,
+        })
+        
         return Response({
-            'course': serializer.data,
+            'course': course_response_data,
             'related_courses': related_serializer.data
         }, status=status.HTTP_200_OK)
 

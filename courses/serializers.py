@@ -3,6 +3,7 @@ from rest_framework import serializers
 from accounts.serializers import OrganizerSerializer, TeacherSerializer
 from taxonomy.serializers import CategorySerializer, TagSerializer
 from .models import Course, Episode, Chapter, Attribute
+from enrollments.models import Enrollment
 
 
 class AttributeSerializer(serializers.ModelSerializer):
@@ -15,18 +16,49 @@ class AttributeSerializer(serializers.ModelSerializer):
 class EpisodeSerializer(serializers.ModelSerializer):
     duration_formatted = serializers.SerializerMethodField()
     file_size_formatted = serializers.SerializerMethodField()
+    is_free = serializers.SerializerMethodField()
+    content_url = serializers.SerializerMethodField()
+    
     
     class Meta:
         model = Episode
         fields = ['id', 'title', 'type', 'thumbnail', 'content_url', 'description', 
                   'duration', 'duration_formatted', 'file_size', 'file_size_formatted', 
-                  'order', 'status', 'published_at']
+                  'order', 'status', 'published_at', 'is_free']
     
     def get_duration_formatted(self, obj):
         return obj.get_formatted_duration()
     
     def get_file_size_formatted(self, obj):
         return obj.get_formatted_file_size()
+    
+    def get_is_free(self, obj):
+        # everything is not free
+        return obj.order <= 2
+    
+    
+    def get_content_url(self, obj):
+        request = self.context.get('request')
+        user = request.user if request and hasattr(request, 'user') else None
+        
+        # If episode is free (first two), always show content URL
+        if obj.order <= 2:
+            return obj.content_url
+            
+        # If user is authenticated, check if they have access
+        if user and user.is_authenticated:
+            # Check if user has purchased this course or has valid subscription
+            has_access = Enrollment.objects.filter(
+                user=user, 
+                course=obj.course, 
+                is_active=True
+            ).exists()
+            
+            if has_access:
+                return obj.content_url
+        
+        # Otherwise, don't provide the content URL
+        return None
 
 
 class ChapterSerializer(serializers.ModelSerializer):

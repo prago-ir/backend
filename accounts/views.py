@@ -6,6 +6,8 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.exceptions import ValidationError
+from rest_framework_simplejwt.tokens import RefreshToken
+
 
 from .models import OTP, MyUser
 from .serializers import MyUserSerializer
@@ -55,11 +57,42 @@ class RequestOTPView(APIView):
         otp = totp.now()  # Generate a time-based OTP
         
         # Send OTP asynchronously using Celery
-        if email:
-            send_otp_email.delay(email, otp)
-        elif phone:
-            send_otp_sms.delay(phone, otp)
-        print(otp)
+        # if email:
+        #     try:
+        #         from django.core.mail import send_mail
+        #         from django.conf import settings
+                
+        #         subject = "کد تایید پراگو"
+        #         message = f"کد تایید ورود: {otp}"
+        #         html_message = f"""
+        #         <div style="font-family: Vazirmatn, 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eee; border-radius: 5px;" dir="rtl">
+        #             <h2 style="color: #333;">کد تایید پراگو</h2>
+        #             <p>از این کد جهت احراز هویت خود استفاده کنید: {otp}</p>
+        #         </div>
+        #         """
+        #         # Log all email settings for debugging
+        #         print(f"Email settings: HOST={settings.EMAIL_HOST}, PORT={settings.EMAIL_PORT}, USER={settings.EMAIL_HOST_USER}")
+                
+        #         # Send immediately for debugging
+        #         result = send_mail(
+        #             subject=subject,
+        #             message=message,
+        #             from_email=settings.DEFAULT_FROM_EMAIL,
+        #             recipient_list=[email],
+        #             html_message=html_message,
+        #             fail_silently=False
+        #         )
+        #         print(f"Direct email send result: {result}")
+                
+        #         # Also try the async version
+        #         send_otp_email.delay(email, otp)
+        #     except Exception as e:
+        #         print(f"Email send error: {str(e)}")
+        #         # Still try the async version
+        #         send_otp_email.delay(email, otp)
+        # elif phone:
+        #     send_otp_sms.delay(phone, otp)
+        print(f"otp for {identifier} is {otp}")
 
         return Response({"message": "OTP sent successfully", "otp": otp}, status=status.HTTP_200_OK)
 
@@ -94,7 +127,11 @@ class VerifyOTPView(APIView):
 
                     return Response({"message": "Login successful.", "user_id": user.id}, status=status.HTTP_200_OK)
                 else:
-                    return Response({"message": "OTP verified. Proceed to signup."}, status=status.HTTP_200_OK)
+                    # No existing user, they need to sign up
+                    return Response({
+                        "message": "OTP verified. Proceed to signup.",
+                        "needs_signup": True  # Add this flag
+                    }, status=status.HTTP_200_OK)
             else:
                 return Response({"error": f"Invalid OTP."}, status=status.HTTP_400_BAD_REQUEST)
         except OTP.DoesNotExist:
@@ -201,3 +238,65 @@ class ResetPasswordView(APIView):
             return Response({"message": "Password reset successfully."}, status=status.HTTP_200_OK)
         except MyUser.DoesNotExist:
             return Response({"error": "User not found."}, status=status.HTTP_404_NOT_FOUND)
+        
+        
+
+class GoogleAuthView(APIView):
+    """
+    Handle Google OAuth authentication data from frontend
+    """
+    def post(self, request):
+        data = request.data
+        email = data.get('email')
+        sub = data.get('sub')  # Google's unique identifier
+        
+        if not email:
+            return Response({"error": "Email is required"}, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Check if a user with this email already exists
+        user = MyUser .objects.filter(email=email).first()
+        needs_profile = False
+        
+        # If user doesn't exist, create a new one with Google data
+        if not user:
+            try:
+                # Create a new user
+                user = MyUser.objects.create(
+                    email=email,
+                    username=f"google_{sub[-8:]}",  # Create a username based on Google ID
+                    is_active=True
+                )
+                
+                # Set user fields if provided
+                if data.get('name'):
+                    # Split name if given and family names aren't provided
+                    if not data.get('given_name') and ' ' in data.get('name'):
+                        first_name, last_name = data.get('name').rsplit(' ', 1)
+                        user.first_name = first_name
+                        user.last_name = last_name
+                    else:
+                        user.first_name = data.get('given_name', '')
+                        user.last_name = data.get('family_name', '')
+                
+                # Save user data
+                user.save()
+                
+                # Flag that user needs to complete profile (add phone, etc.)
+                needs_profile = True
+                
+            except Exception as e:
+                return Response(
+                    {"error": f"Failed to create user: {str(e)}"},
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                )
+        
+        # Generate tokens for the user
+        refresh = RefreshToken.for_user(user)
+        
+        return Response({
+            "message": "Google authentication successful",
+            "user_id": user.id,
+            "needs_profile": needs_profile,
+            "access_token": str(refresh.access_token),
+            "refresh_token": str(refresh),
+        }, status=status.HTTP_200_OK)

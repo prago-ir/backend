@@ -18,20 +18,6 @@ class Attribute(models.Model):
         verbose_name_plural = 'ویژگی‌ها'
 
 
-class Chapter(models.Model):
-    course = models.ForeignKey('Course', on_delete=models.CASCADE, related_name='chapters', verbose_name='دوره')
-    number = models.PositiveSmallIntegerField(verbose_name='شماره فصل')
-    title = models.CharField(max_length=100, verbose_name='عنوان فصل')
-    description = models.TextField(blank=True, verbose_name='توضیحات فصل')
-
-    def __str__(self):
-        return f"فصل {self.number}: {self.title}"
-
-    class Meta:
-        verbose_name = 'فصل'
-        verbose_name_plural = 'فصل‌ها'
-
-
 class Course(models.Model):
     PUBLISHED_STATUS = (
         ('draft', 'پیش‌نویس'),
@@ -109,6 +95,19 @@ class Course(models.Model):
             return self.special_offer_price
         return self.price
 
+
+class Chapter(models.Model):
+    course = models.ForeignKey('Course', on_delete=models.CASCADE, related_name='chapters', verbose_name='دوره')
+    number = models.PositiveSmallIntegerField(verbose_name='شماره فصل')
+    title = models.CharField(max_length=100, verbose_name='عنوان فصل')
+    description = models.TextField(blank=True, verbose_name='توضیحات فصل')
+
+    def __str__(self):
+        return f"فصل {self.number}: {self.title}"
+
+    class Meta:
+        verbose_name = 'فصل'
+        verbose_name_plural = 'فصل‌ها'
 
 class Episode(models.Model):
     EPISODE_TYPES = (
