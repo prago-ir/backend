@@ -9,7 +9,7 @@ from rest_framework.exceptions import ValidationError
 from rest_framework_simplejwt.tokens import RefreshToken
 
 
-from .models import OTP, MyUser
+from .models import OTP, MyUser, Profile
 from .serializers import MyUserSerializer
 from .tasks import send_otp_email, send_otp_sms
 
@@ -124,8 +124,19 @@ class VerifyOTPView(APIView):
                     # Authenticate the user
                     user = authenticate(email=email, phone=phone)
                     login(request, user)
+                    
+                    profile = Profile.objects.get(user=user)  
+                    
+                    # send a dict from user 
+                    # to frontend with all the user data
+                    user_data = {
+                        "email": user.email,
+                        "phone": user.phone,
+                        "full_name": user.full_name(),
+                        "image": profile.avatar.url if profile.avatar else None,
+                    }
 
-                    return Response({"message": "Login successful.", "user_id": user.id}, status=status.HTTP_200_OK)
+                    return Response({"message": "Login successful.", "user_data": user_data}, status=status.HTTP_200_OK)
                 else:
                     # No existing user, they need to sign up
                     return Response({

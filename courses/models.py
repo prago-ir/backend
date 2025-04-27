@@ -190,3 +190,39 @@ class Episode(models.Model):
         if hours > 0:
             return f"{hours}:{minutes:02d}:{seconds:02d}"
         return f"{minutes}:{seconds:02d}"
+
+
+
+class RoadMap(models.Model):
+    name = models.CharField(max_length=100, verbose_name='نام نقشه راه')
+    slug = models.SlugField(max_length=100, unique=True, verbose_name='اسلاگ نقشه راه')
+    description = models.TextField(verbose_name='توضیحات')
+    courses = models.ManyToManyField(Course, related_name='roadmaps', verbose_name='دوره‌ها')
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='تاریخ ایجاد')
+    updated_at = models.DateTimeField(auto_now=True, verbose_name='تاریخ بروزرسانی')
+    cover_image = models.ImageField(verbose_name='تصویر نقشه راه', upload_to='roadmap_cover_image')
+    
+    status = models.CharField(max_length=20, choices=Course.PUBLISHED_STATUS, default='draft')
+    published_at = models.DateTimeField(null=True, blank=True, verbose_name='تاریخ انتشار')
+    
+    def __str__(self):
+        return self.name
+    
+    def courses_count(self):
+        """Return the number of courses in this roadmap"""
+        return self.courses.count()
+    
+    def get_courses(self):
+        """Return the published courses associated with this roadmap."""
+        return self.courses.filter(status='published')
+    
+    def save(self, *args, **kwargs):
+        # Set published_at when status changes to published
+        if self.status == 'published' and not self.published_at:
+            self.published_at = timezone.now()
+        super().save(*args, **kwargs)
+        
+    class Meta:
+        verbose_name = 'نقشه راه'
+        verbose_name_plural = 'نقشه‌های راه'
+        

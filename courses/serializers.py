@@ -2,7 +2,7 @@ from rest_framework import serializers
 
 from accounts.serializers import OrganizerSerializer, TeacherSerializer
 from taxonomy.serializers import CategorySerializer, TagSerializer
-from .models import Course, Episode, Chapter, Attribute
+from .models import Course, Episode, Chapter, Attribute, RoadMap
 from enrollments.models import Enrollment
 
 
@@ -118,3 +118,40 @@ class CourseDetailSerializer(serializers.ModelSerializer):
     def get_is_enrolled(self, obj):
         # Check if context contains enrollment info
         return self.context.get('is_enrolled', False)
+
+
+class RoadMapSerializer(serializers.ModelSerializer):
+    courses = serializers.SerializerMethodField()
+    total_hours = serializers.SerializerMethodField()
+    total_videos = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = RoadMap
+        fields = [
+            'id', 'name', 'slug', 'description', 'cover_image', 
+            'status', 'published_at', 'courses', 'total_hours', 'total_videos'
+        ]
+    
+    def get_courses(self, obj):
+        # Only return published courses in the roadmap
+        published_courses = obj.get_courses()
+        return CourseSerializer(published_courses, many=True).data
+    
+    def get_total_hours(self, obj):
+        # Calculate total hours from all courses in the roadmap
+        published_courses = obj.get_courses()
+        total = sum(course.total_hours or 0 for course in published_courses)
+        return round(total, 1)  # Round to one decimal place
+    
+    def get_total_videos(self, obj):
+        # Count all episodes from courses in this roadmap
+        published_courses = obj.get_courses()
+        count = 0
+        for course in published_courses:
+            # Count published episodes in each course
+            count += Episode.objects.filter(
+                course=course, 
+                status='published'
+            ).count()
+        return count
+

@@ -6,8 +6,8 @@ from django.shortcuts import get_object_or_404
 from django.db.models import Count, Q, Case, When, Value, IntegerField
 from django.utils import timezone
 
-from .models import Course, Episode
-from .serializers import CourseSerializer, CourseDetailSerializer, EpisodeSerializer
+from .models import Course, Episode, RoadMap
+from .serializers import CourseSerializer, CourseDetailSerializer, EpisodeSerializer, RoadMapSerializer
 from enrollments.models import Enrollment, UserProgress
 
 class LatestCoursesView(APIView):
@@ -40,52 +40,57 @@ class PopularCoursesView(APIView):
 
 class CourseListView(APIView):
     def get(self, request):
-        queryset = Course.objects.filter(
+        # Get all published courses
+        courses_queryset = Course.objects.filter(
             status='published',
             published_at__lte=timezone.now()
         )
-
-        # Search functionality
-        search_query = request.query_params.get('search', '')
-        if search_query:
-            queryset = queryset.filter(
-                Q(title__icontains=search_query) | 
-                Q(latin_title__icontains=search_query) |
-                Q(description__icontains=search_query) |
-                Q(teachers__first_name__icontains=search_query) |
-                Q(teachers__last_name__icontains=search_query)
-            ).distinct()
-
-        # Filtering
-        types = request.query_params.getlist('types')
-        duration = request.query_params.getlist('duration')
-        organizer = request.query_params.getlist('organizer')
-        category = request.query_params.getlist('category')
-
-        if types:
-            queryset = queryset.filter(type__in=types)
-        if duration:
-            queryset = queryset.filter(duration__in=duration)
-        if organizer:
-            queryset = queryset.filter(organizers__id__in=organizer)
-        if category:
-            queryset = queryset.filter(categories__id__in=category)
-
-        # Sorting
-        sort_option = request.query_params.get('sort', 'newest')
-        if sort_option == 'newest':
-            queryset = queryset.order_by('-published_at')
-        elif sort_option == 'popular':
-            queryset = queryset.annotate(enrollment_count=Count('enrollments')).order_by('-enrollment_count')
-        elif sort_option == 'priceLow':
-            queryset = queryset.order_by('price')
-        elif sort_option == 'priceHigh':
-            queryset = queryset.order_by('-price')
-        elif sort_option == 'ratingHigh':
-            queryset = queryset.order_by('-rating')
-
-        serializer = CourseSerializer(queryset, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        
+        # Add any essential annotations that will be needed for sorting on frontend
+        courses_queryset = courses_queryset.annotate(
+            enrollment_count=Count('enrollments')
+        )
+        
+        # Include related data to avoid N+1 queries
+        courses_queryset = courses_queryset.prefetch_related(
+            'teachers', 'categories', 'organizers', 'tags'
+        )
+        
+        # Get all published roadmaps
+        roadmaps_queryset = RoadMap.objects.filter(
+            status='published',
+            published_at__lte=timezone.now()
+        )
+        
+        # Prefetch related courses for roadmaps
+        roadmaps_queryset = roadmaps_queryset.prefetch_related('courses')
+        
+        # Serialize both types of content
+        courses_serializer = CourseSerializer(courses_queryset, many=True)
+        roadmaps_serializer = RoadMapSerializer(roadmaps_queryset, many=True)
+        
+        # Prepare metadata needed for filtering
+        categories = list(set(cat.name for course in courses_queryset for cat in course.categories.all()))
+        organizers = list(set(org.organization_name for course in courses_queryset for org in course.organizers.all()))
+        
+        # Add content type information to each item
+        courses_data = courses_serializer.data
+        for course in courses_data:
+            course['content_type'] = 'course'
+            
+        roadmaps_data = roadmaps_serializer.data
+        for roadmap in roadmaps_data:
+            roadmap['content_type'] = 'roadmap'
+        
+        return Response({
+            'courses': courses_data,
+            'roadmaps': roadmaps_data,
+            'metadata': {
+                'categories': categories,
+                'organizers': organizers,
+                'types': ['course', 'roadmap']
+            }
+        }, status=status.HTTP_200_OK)
 
 
 class CourseDetailView(APIView):
