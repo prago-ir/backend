@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Coupon, Order, Transaction, OrderItem, Cart, CartItem
+from .models import Coupon, Order, Transaction, OrderItem
 from django.contrib.contenttypes.models import ContentType
 from courses.models import Course
 from subscriptions.models import SubscriptionPlan
@@ -94,29 +94,6 @@ class OrderItemAdmin(admin.ModelAdmin):
     list_filter = ['content_type']
     search_fields = ['order__order_number']
     raw_id_fields = ['order']
-
-    def formfield_for_foreignkey(self, db_field, request, **kwargs):
-        if db_field.name == 'content_type':
-            kwargs['queryset'] = ContentType.objects.filter(
-                model__in=['course', 'subscriptionplan']
-            )
-        return super().formfield_for_foreignkey(db_field, request, **kwargs)
-
-@admin.register(Cart)
-class CartAdmin(admin.ModelAdmin):
-    list_display = ['user', 'total_items', 'subtotal', 'discount_amount', 'total', 'created_at', 'updated_at']
-    list_filter = ['created_at', 'updated_at']
-    search_fields = ['user__username', 'user__email']
-    raw_id_fields = ['user', 'coupon']
-    readonly_fields = ['created_at', 'updated_at']
-
-@admin.register(CartItem)
-class CartItemAdmin(admin.ModelAdmin):
-    list_display = ['cart', 'content_type', 'object_id', 'quantity', 'added_at']
-    list_filter = ['content_type', 'added_at']
-    search_fields = ['cart__user__username', 'cart__user__email']
-    raw_id_fields = ['cart']
-    readonly_fields = ['added_at']
 
     def formfield_for_foreignkey(self, db_field, request, **kwargs):
         if db_field.name == 'content_type':
