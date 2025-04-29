@@ -27,14 +27,18 @@ urlpatterns = [
     path('api/v1/courses/', include(('courses.urls', 'courses'), namespace='courses')),
     # path('api/v1/taxonomy', include(('taxonomy.urls', 'taxonomy'), namespace='taxonomy')),
     # path('api/v1/subscriptions/', include(('subscriptions.urls', 'subscriptions'), namespace='subscriptions')),
-    path('api/v1/auth/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
-    path('api/v1/auth/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),   
+    path('api/v1/auth/token/', TokenObtainPairView.as_view(),
+         name='token_obtain_pair'),
+    path('api/v1/auth/token/refresh/',
+         TokenRefreshView.as_view(), name='token_refresh'),
 ]
 
 # Add static file serving for development
 if settings.DEBUG:
-    urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
-    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+    urlpatterns += static(settings.STATIC_URL,
+                          document_root=settings.STATIC_ROOT)
+    urlpatterns += static(settings.MEDIA_URL,
+                          document_root=settings.MEDIA_ROOT)
 
 admin.site.site_title = _("Prago site admin (DEV)")
 admin.site.site_header = _("Prago administration")

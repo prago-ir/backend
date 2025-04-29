@@ -24,19 +24,21 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'django-insecure-default-key-for-dev')
+SECRET_KEY = os.environ.get(
+    'DJANGO_SECRET_KEY', 'django-insecure-default-key-for-dev')
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.environ.get('DEBUG', True)
 
-ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
+ALLOWED_HOSTS = os.environ.get(
+    'ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
 
 # Application definition
 
 INSTALLED_APPS = [
     # My Apps
     'accounts',
-    
+
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -51,6 +53,7 @@ INSTALLED_APPS = [
     'import_export',
     'django_celery_results',
     'django_celery_beat',
+    'adminsortable2',
 
     # My Apps
     'courses',
@@ -77,7 +80,7 @@ CORS_ALLOWED_ORIGINS = [
     'http://frontend',
     'http://api.localhost',
     'http://127.0.0.1:3000',
-    'http://localhost:3000'             
+    'http://localhost:3000'
 ]
 
 
@@ -124,11 +127,11 @@ if os.environ.get('DB_ENGINE') == 'django.db.backends.mysql':
     # Only add this for non-development environments
     if 'mysql' in os.environ.get('DB_HOST', ''):
         logger = logging.getLogger('django')
-        
+
         # Get database connection
         import django.db.backends.mysql.base
         original_connect = django.db.backends.mysql.base.DatabaseWrapper.get_new_connection
-        
+
         def get_new_connection_with_retry(self, conn_params):
             retries = 10
             delay = 3
@@ -137,13 +140,15 @@ if os.environ.get('DB_ENGINE') == 'django.db.backends.mysql':
                     return original_connect(self, conn_params)
                 except Exception as e:
                     if attempt < retries - 1:
-                        logger.warning(f"Database connection attempt {attempt+1}/{retries} failed. Retrying in {delay} seconds... Error: {str(e)}")
+                        logger.warning(
+                            f"Database connection attempt {attempt+1}/{retries} failed. Retrying in {delay} seconds... Error: {str(e)}")
                         time.sleep(delay)
                         delay *= 1.5  # Exponential backoff
                     else:
-                        logger.error(f"Failed to connect to database after {retries} attempts: {str(e)}")
+                        logger.error(
+                            f"Failed to connect to database after {retries} attempts: {str(e)}")
                         raise
-        
+
         django.db.backends.mysql.base.DatabaseWrapper.get_new_connection = get_new_connection_with_retry
 
 # Password validation
@@ -218,21 +223,21 @@ SIMPLE_JWT = {
 }
 
 # Celery Configuration Options
-CELERY_BROKER_URL = 'redis://redis:6379'
-CELERY_RESULT_BACKEND = 'redis://redis:6379'
-CELERY_TIMEZONE = 'Asia/Tehran'
+CELERY_TIMEZONE = "Asia/Tehran"
+REDIS_HOST = os.environ.get('REDIS_HOST', '127.0.0.1')
+REDIS_PORT = os.environ.get('REDIS_PORT', '6379')
+CELERY_BROKER_URL = os.environ.get(
+    'CELERY_BROKER_URL', f'redis://{REDIS_HOST}:{REDIS_PORT}')
+# print(CELERY_BROKER_URL)
+# Use Redis for result backend too
+CELERY_RESULT_BACKEND = f'redis://{REDIS_HOST}:{REDIS_PORT}/0'
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'
 CELERYD_SOFT_TIME_LIMIT = 20
 CELERY_TASK_TRACK_STARTED = True
 CELERYD_TIME_LIMIT = 30 * 60
 CELERY_TASK_MAX_RETRIES = 3
-# CELERY_TIMEZONE = "Asia/Tehran"
-# REDIS_HOST = os.environ.get('REDIS_HOST', '127.0.0.1')
-# REDIS_PORT = os.environ.get('REDIS_PORT', '6379')
-# CELERY_BROKER_URL = os.environ.get('CELERY_BROKER_URL', f'redis://{REDIS_HOST}:{REDIS_PORT}')
-# CELERY_RESULT_BACKEND = f'redis://{REDIS_HOST}:{REDIS_PORT}/0'  # Use Redis for result backend too
-# CELERY_ACCEPT_CONTENT = ['json']
-# CELERY_TASK_SERIALIZER = 'json'
-# CELERY_RESULT_SERIALIZER = 'json'
 
 # Email Configuration
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
@@ -241,7 +246,8 @@ EMAIL_PORT = int(os.environ.get('EMAIL_PORT', 587))
 EMAIL_USE_TLS = os.environ.get('EMAIL_USE_TLS', 'True') == 'True'
 EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', '')
 EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
-DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'Your App <your-email@example.com>')
+DEFAULT_FROM_EMAIL = os.environ.get(
+    'DEFAULT_FROM_EMAIL', 'Your App <your-email@example.com>')
 
 SMS_API_KEY = os.environ.get("SMS_API_KEY", "")
 
@@ -289,7 +295,7 @@ LOGGING = {
     },
 }
 
-
 # Zarinpal Configuration
 ZARINPAL_MERCHANT_ID = os.environ.get('ZARINPAL_MERCHANT_ID', uuid.uuid4())
-ZARINPAL_API_BASE = os.environ.get('ZARINPAL_API_BASE', 'https://sandbox.zarinpal.com/')
+ZARINPAL_API_BASE = os.environ.get(
+    'ZARINPAL_API_BASE', 'https://sandbox.zarinpal.com/')
