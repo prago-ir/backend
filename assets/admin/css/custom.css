@@ -1,15 +1,14 @@
-html[data-theme="light"],
 :root {
     --font-family-primary:
-            "Vazirmatn",
-            "Segoe UI",
-            system-ui,
-            Roboto,
-            "Helvetica Neue",
-            Arial,
-            sans-serif,
-            "Apple Color Emoji",
-            "Segoe UI Emoji",
-            "Segoe UI Symbol",
-            "Noto Color Emoji";
+        "Vazirmatn",
+        "Segoe UI",
+        system-ui,
+        Roboto,
+        "Helvetica Neue",
+        Arial,
+        sans-serif,
+        "Apple Color Emoji",
+        "Segoe UI Emoji",
+        "Segoe UI Symbol",
+        "Noto Color Emoji";
 }
