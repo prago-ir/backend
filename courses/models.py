@@ -1,5 +1,9 @@
 from django.db import models
 from django.utils import timezone
+from django.db.models.signals import post_save
+from django.dispatch import receiver
+
+from ckeditor.fields import RichTextField
 
 from subscriptions.models import UserSubscription
 from taxonomy.models import Category, Tag
@@ -7,8 +11,33 @@ from accounts.models import Organizer, Teacher
 
 
 class Attribute(models.Model):
+    # Define icon choices based on available icons in the frontend
+    ICON_CHOICES = (
+        ('Book', 'Book'),
+        ('Clock', 'Clock'),
+        ('VideoCircle', 'Video Circle'),
+        ('Teacher', 'Teacher'),
+        ('NoteFavorite', 'Note Favorite'),
+        ('Chart', 'Chart'),
+        ('Calendar', 'Calendar'),
+        ('Layer', 'Layer'),
+        ('Code', 'Code'),
+        ('People', 'People'),
+        ('Lock', 'Lock'),
+        ('Rocket', 'Rocket'),
+        ('Prago', 'Prago'),
+        ('default', 'Default (Clock)'),
+    )
+
     name = models.CharField(max_length=100, verbose_name='نام ویژگی')
     value = models.CharField(max_length=255, verbose_name='مقدار ویژگی')
+    icon = models.CharField(
+        max_length=50,
+        choices=ICON_CHOICES,
+        blank=True,
+        null=True,
+        verbose_name='آیکون'
+    )
 
     def __str__(self):
         return f"{self.name}: {self.value}"
@@ -24,37 +53,52 @@ class Course(models.Model):
         ('published', 'منتشر شده'),
         ('archived', 'بایگانی شده'),
     )
-    
-    cover_image = models.ImageField(verbose_name='تصویر دوره', upload_to='cover_image')
+
+    cover_image = models.ImageField(
+        verbose_name='تصویر دوره', upload_to='cover_image')
     title = models.CharField(max_length=100, verbose_name='تیتر دوره')
-    latin_title = models.CharField(max_length=100, verbose_name='تیتر لاتین دوره')
-    slug = models.SlugField(max_length=100, unique=True, verbose_name='اسلاگ دوره')
+    latin_title = models.CharField(
+        max_length=100, verbose_name='تیتر لاتین دوره')
+    slug = models.SlugField(max_length=100, unique=True,
+                            verbose_name='اسلاگ دوره')
     description = models.TextField(verbose_name='توضیحات کامل دوره')
-    price = models.DecimalField(max_digits=9, decimal_places=0, verbose_name='قیمت')
-    
+    price = models.DecimalField(
+        max_digits=9, decimal_places=0, verbose_name='قیمت')
+
     # Published status
-    status = models.CharField(max_length=20, choices=PUBLISHED_STATUS, default='draft', 
-                             verbose_name='وضعیت انتشار')
-    published_at = models.DateTimeField(null=True, blank=True, verbose_name='تاریخ انتشار')
-    
+    status = models.CharField(max_length=20, choices=PUBLISHED_STATUS, default='draft',
+                              verbose_name='وضعیت انتشار')
+    published_at = models.DateTimeField(
+        null=True, blank=True, verbose_name='تاریخ انتشار')
+
     # Special offer fields
-    special_offer_price = models.DecimalField(max_digits=9, decimal_places=0, null=True, blank=True, 
-                                            verbose_name='قیمت ویژه')
-    special_offer_start_date = models.DateTimeField(null=True, blank=True, verbose_name='تاریخ شروع پیشنهاد ویژه')
-    special_offer_end_date = models.DateTimeField(null=True, blank=True, verbose_name='تاریخ پایان پیشنهاد ویژه')
-    
+    special_offer_price = models.DecimalField(max_digits=9, decimal_places=0, null=True, blank=True,
+                                              verbose_name='قیمت ویژه')
+    special_offer_start_date = models.DateTimeField(
+        null=True, blank=True, verbose_name='تاریخ شروع پیشنهاد ویژه')
+    special_offer_end_date = models.DateTimeField(
+        null=True, blank=True, verbose_name='تاریخ پایان پیشنهاد ویژه')
+
     intro_video_link = models.URLField(verbose_name='لینک ویدیو معرفی')
-    total_hours = models.DecimalField(max_digits=5, decimal_places=1, verbose_name='مجموع ساعات')
+    total_hours = models.DecimalField(
+        max_digits=5, decimal_places=1, verbose_name='مجموع ساعات')
 
     # Relationships
-    organizers = models.ManyToManyField(Organizer, related_name='organized_courses', verbose_name='برگزار کننده‌ها')
-    teachers = models.ManyToManyField(Teacher, related_name='teaching_courses', verbose_name='مدرس‌ها')
-    attributes = models.ManyToManyField(Attribute, related_name='courses', verbose_name='ویژگی‌ها')
-    tags = models.ManyToManyField(Tag, related_name='courses', verbose_name='تگ‌ها')
-    categories = models.ManyToManyField(Category, related_name='courses', verbose_name='دسته‌بندی‌ها')
+    organizers = models.ManyToManyField(
+        Organizer, related_name='organized_courses', verbose_name='برگزار کننده‌ها')
+    teachers = models.ManyToManyField(
+        Teacher, related_name='teaching_courses', verbose_name='مدرس‌ها')
+    attributes = models.ManyToManyField(
+        Attribute, related_name='courses', verbose_name='ویژگی‌ها')
+    tags = models.ManyToManyField(
+        Tag, related_name='courses', verbose_name='تگ‌ها')
+    categories = models.ManyToManyField(
+        Category, related_name='courses', verbose_name='دسته‌بندی‌ها')
 
-    created_at = models.DateTimeField(auto_now_add=True, verbose_name='تاریخ ایجاد')
-    updated_at = models.DateTimeField(auto_now=True, verbose_name='تاریخ بروزرسانی')
+    created_at = models.DateTimeField(
+        auto_now_add=True, verbose_name='تاریخ ایجاد')
+    updated_at = models.DateTimeField(
+        auto_now=True, verbose_name='تاریخ بروزرسانی')
 
     def __str__(self):
         return self.title
@@ -62,13 +106,13 @@ class Course(models.Model):
     class Meta:
         verbose_name = 'دوره'
         verbose_name_plural = 'دوره‌ها'
-    
+
     def save(self, *args, **kwargs):
         # Set published_at when status changes to published
         if self.status == 'published' and not self.published_at:
             self.published_at = timezone.now()
         super().save(*args, **kwargs)
-        
+
     def is_free_for_user(self, user):
         """Check if the course is free for a specific user via their subscriptions"""
         from django.utils import timezone
@@ -78,7 +122,7 @@ class Course(models.Model):
             end_date__gt=timezone.now(),
             subscription_plan__included_courses=self
         ).exists()
-        
+
     def has_active_special_offer(self):
         """Check if the course currently has an active special offer"""
         now = timezone.now()
@@ -88,7 +132,7 @@ class Course(models.Model):
             self.special_offer_end_date is not None and
             self.special_offer_start_date <= now <= self.special_offer_end_date
         )
-    
+
     def get_current_price(self):
         """Get the current price considering any active special offers"""
         if self.has_active_special_offer():
@@ -97,17 +141,19 @@ class Course(models.Model):
 
 
 class Chapter(models.Model):
-    course = models.ForeignKey('Course', on_delete=models.CASCADE, related_name='chapters', verbose_name='دوره')
+    course = models.ForeignKey(
+        'Course', on_delete=models.CASCADE, related_name='chapters', verbose_name='دوره')
     number = models.PositiveSmallIntegerField(verbose_name='شماره فصل')
     title = models.CharField(max_length=100, verbose_name='عنوان فصل')
     description = models.TextField(blank=True, verbose_name='توضیحات فصل')
 
     def __str__(self):
-        return f"فصل {self.number}: {self.title}"
+        return f"فصل {self.number}: {self.title} از {self.course.title}"
 
     class Meta:
         verbose_name = 'فصل'
         verbose_name_plural = 'فصل‌ها'
+
 
 class Episode(models.Model):
     EPISODE_TYPES = (
@@ -116,7 +162,7 @@ class Episode(models.Model):
         ('text', 'متن'),
         ('quiz', 'آزمون'),
     )
-    
+
     PUBLISHED_STATUS = (
         ('draft', 'پیش‌نویس'),
         ('published', 'منتشر شده'),
@@ -124,31 +170,41 @@ class Episode(models.Model):
     )
 
     title = models.CharField(max_length=200, verbose_name='عنوان اپیزود')
-    chapter = models.ForeignKey(Chapter, on_delete=models.CASCADE, related_name='episodes', verbose_name='فصل')
-    course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name='episodes', verbose_name='دوره')
-    type = models.CharField(max_length=10, choices=EPISODE_TYPES, default='video', verbose_name='نوع')
+    chapter = models.ForeignKey(
+        Chapter, on_delete=models.CASCADE, related_name='episodes', verbose_name='فصل')
+    course = models.ForeignKey(
+        Course, on_delete=models.CASCADE, related_name='episodes', verbose_name='دوره')
+    type = models.CharField(
+        max_length=10, choices=EPISODE_TYPES, default='video', verbose_name='نوع')
     thumbnail = models.ImageField(upload_to='episode_thumbnails', blank=True, null=True,
                                   verbose_name='تصویر بند انگشتی')
     content_url = models.URLField(verbose_name='آدرس محتوا')
     description = models.TextField(blank=True, verbose_name='توضیحات')
-    
+
     # Published status
-    status = models.CharField(max_length=20, choices=PUBLISHED_STATUS, default='draft', 
-                             verbose_name='وضعیت انتشار')
-    published_at = models.DateTimeField(null=True, blank=True, verbose_name='تاریخ انتشار')
+    status = models.CharField(max_length=20, choices=PUBLISHED_STATUS, default='draft',
+                              verbose_name='وضعیت انتشار')
+    published_at = models.DateTimeField(
+        null=True, blank=True, verbose_name='تاریخ انتشار')
 
     # Duration field for videos and audio (stored as DurationField)
-    duration = models.DurationField(blank=True, null=True, verbose_name='مدت زمان')
+    duration = models.DurationField(
+        blank=True, null=True, verbose_name='مدت زمان')
 
     # File size in bytes
-    file_size = models.PositiveBigIntegerField(blank=True, null=True, verbose_name='حجم فایل')
+    file_size = models.PositiveBigIntegerField(
+        blank=True, null=True, verbose_name='حجم فایل')
 
     # For text content - word count
-    word_count = models.PositiveIntegerField(blank=True, null=True, verbose_name='تعداد کلمات')
+    word_count = models.PositiveIntegerField(
+        blank=True, null=True, verbose_name='تعداد کلمات')
 
-    order = models.PositiveIntegerField(default=1, verbose_name='ترتیب')
-    created_at = models.DateTimeField(auto_now_add=True, verbose_name='تاریخ ایجاد')
-    updated_at = models.DateTimeField(auto_now=True, verbose_name='تاریخ بروزرسانی')
+    order = models.PositiveIntegerField(
+        default=0, verbose_name='ترتیب', blank=False, null=False, db_index=True)
+    created_at = models.DateTimeField(
+        auto_now_add=True, verbose_name='تاریخ ایجاد')
+    updated_at = models.DateTimeField(
+        auto_now=True, verbose_name='تاریخ بروزرسانی')
 
     def __str__(self):
         return self.title
@@ -156,9 +212,8 @@ class Episode(models.Model):
     class Meta:
         verbose_name = 'اپیزود'
         verbose_name_plural = 'اپیزودها'
-        ordering = ['chapter', 'order']
-        unique_together = ['course', 'order']
-    
+        ordering = ['order']
+
     def save(self, *args, **kwargs):
         # Set published_at when status changes to published
         if self.status == 'published' and not self.published_at:
@@ -192,37 +247,63 @@ class Episode(models.Model):
         return f"{minutes}:{seconds:02d}"
 
 
-
 class RoadMap(models.Model):
     name = models.CharField(max_length=100, verbose_name='نام نقشه راه')
-    slug = models.SlugField(max_length=100, unique=True, verbose_name='اسلاگ نقشه راه')
+    slug = models.SlugField(max_length=100, unique=True,
+                            verbose_name='اسلاگ نقشه راه')
     description = models.TextField(verbose_name='توضیحات')
-    courses = models.ManyToManyField(Course, related_name='roadmaps', verbose_name='دوره‌ها')
-    created_at = models.DateTimeField(auto_now_add=True, verbose_name='تاریخ ایجاد')
-    updated_at = models.DateTimeField(auto_now=True, verbose_name='تاریخ بروزرسانی')
-    cover_image = models.ImageField(verbose_name='تصویر نقشه راه', upload_to='roadmap_cover_image')
-    
-    status = models.CharField(max_length=20, choices=Course.PUBLISHED_STATUS, default='draft')
-    published_at = models.DateTimeField(null=True, blank=True, verbose_name='تاریخ انتشار')
-    
+    courses = models.ManyToManyField(
+        Course, related_name='roadmaps', verbose_name='دوره‌ها')
+    created_at = models.DateTimeField(
+        auto_now_add=True, verbose_name='تاریخ ایجاد')
+    updated_at = models.DateTimeField(
+        auto_now=True, verbose_name='تاریخ بروزرسانی')
+    cover_image = models.ImageField(
+        verbose_name='تصویر نقشه راه', upload_to='roadmap_cover_image')
+
+    status = models.CharField(
+        max_length=20, choices=Course.PUBLISHED_STATUS, default='draft')
+    published_at = models.DateTimeField(
+        null=True, blank=True, verbose_name='تاریخ انتشار')
+
     def __str__(self):
         return self.name
-    
+
     def courses_count(self):
         """Return the number of courses in this roadmap"""
         return self.courses.count()
-    
+
     def get_courses(self):
         """Return the published courses associated with this roadmap."""
         return self.courses.filter(status='published')
-    
+
     def save(self, *args, **kwargs):
         # Set published_at when status changes to published
         if self.status == 'published' and not self.published_at:
             self.published_at = timezone.now()
         super().save(*args, **kwargs)
-        
+
     class Meta:
         verbose_name = 'نقشه راه'
         verbose_name_plural = 'نقشه‌های راه'
-        
+
+
+@receiver(post_save, sender=Episode)
+def schedule_video_metadata_processing(sender, instance, created, **kwargs):
+    """Signal handler to schedule video metadata processing when a new episode is created"""
+    if instance.type == 'video' and instance.content_url:
+        from .tasks import process_video_metadata
+        process_video_metadata.delay(instance.id)
+
+
+@receiver(post_save, sender=Episode)
+def update_course_hours_after_episode_change(sender, instance, **kwargs):
+    """
+    Signal handler to update course total hours when an episode is created, 
+    updated, or its duration changes
+    """
+    # Only process for video episodes with duration
+    if instance.type == 'video':
+        from .tasks import update_course_total_hours
+        # Schedule the task to update course hours
+        update_course_total_hours.delay(instance.course.id)

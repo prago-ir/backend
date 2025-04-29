@@ -9,7 +9,7 @@ from enrollments.models import Enrollment
 class AttributeSerializer(serializers.ModelSerializer):
     class Meta:
         model = Attribute
-        fields = ['id', 'name', 'value']
+        fields = ['id', 'name', 'value', 'icon']
 
 
 
@@ -31,18 +31,32 @@ class EpisodeSerializer(serializers.ModelSerializer):
     
     def get_file_size_formatted(self, obj):
         return obj.get_formatted_file_size()
-    
+   
     def get_is_free(self, obj):
-        # everything is not free
-        return obj.order <= 2
+        # Get the first two episodes by order from this course
+        first_two_episodes = Episode.objects.filter(
+            course=obj.course,
+            status='published',
+            type='video'
+        ).order_by('order')[:2]
+        
+        # Check if current episode is one of the first two
+        return obj in first_two_episodes
     
     
     def get_content_url(self, obj):
         request = self.context.get('request')
         user = request.user if request and hasattr(request, 'user') else None
         
+        # Get the first two episodes by order from this course
+        first_two_episodes = Episode.objects.filter(
+            course=obj.course,
+            status='published',
+            type='video'
+        ).order_by('order')[:2]
+        
         # If episode is free (first two), always show content URL
-        if obj.order <= 2:
+        if obj in first_two_episodes:
             return obj.content_url
             
         # If user is authenticated, check if they have access
