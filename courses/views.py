@@ -13,6 +13,19 @@ from taxonomy.serializers import CategorySerializer
 from accounts.serializers import OrganizerSerializer
 
 
+class LatestRoadmapView(APIView):
+    """View to get the last three published roadmaps for home page"""
+
+    def get(self, request):
+        queryset = RoadMap.objects.filter(
+            status='published',
+            published_at__lte=timezone.now()
+        ).order_by('-published_at')[:3]
+
+        serializer = RoadMapSerializer(queryset, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
 class LatestCoursesView(APIView):
     """View to get the last six published courses for home page"""
 
