@@ -25,6 +25,7 @@ urlpatterns = [
     path('prag/', admin.site.urls),
     path('api/v1/auth/', include(('accounts.urls', 'auth'), namespace='auth')),
     path('api/v1/courses/', include(('courses.urls', 'courses'), namespace='courses')),
+    path('api/v1/support/', include(('support.urls', 'support'), namespace='support')),
     # path('api/v1/taxonomy', include(('taxonomy.urls', 'taxonomy'), namespace='taxonomy')),
     # path('api/v1/subscriptions/', include(('subscriptions.urls', 'subscriptions'), namespace='subscriptions')),
     path('api/v1/auth/token/', TokenObtainPairView.as_view(),
