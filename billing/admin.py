@@ -10,9 +10,11 @@ VALID_CONTENT_TYPES = [
     ContentType.objects.get_for_model(SubscriptionPlan)
 ]
 
+
 @admin.register(Coupon)
 class CouponAdmin(admin.ModelAdmin):
-    list_display = ['code', 'discount_type', 'discount_value', 'is_active', 'valid_from', 'valid_to', 'usage_limit', 'times_used']
+    list_display = ['code', 'discount_type', 'discount_value',
+                    'is_active', 'valid_from', 'valid_to', 'usage_limit', 'times_used']
     list_filter = ['is_active', 'discount_type', 'valid_from', 'valid_to']
     search_fields = ['code', 'description']
     readonly_fields = ['times_used', 'created_at', 'updated_at']
@@ -36,9 +38,11 @@ class CouponAdmin(admin.ModelAdmin):
         }),
     )
 
+
 @admin.register(Order)
 class OrderAdmin(admin.ModelAdmin):
-    list_display = ['order_number', 'user', 'order_type', 'status', 'total_amount', 'discount_amount', 'final_amount', 'created_at', 'paid_at']
+    list_display = ['order_number', 'user', 'order_type', 'status',
+                    'total_amount', 'discount_amount', 'final_amount', 'created_at', 'paid_at']
     list_filter = ['status', 'order_type', 'created_at', 'paid_at']
     search_fields = ['order_number', 'user__username', 'user__email']
     readonly_fields = ['order_number', 'created_at', 'updated_at', 'paid_at']
@@ -65,11 +69,14 @@ class OrderAdmin(admin.ModelAdmin):
             return False
         return super().has_delete_permission(request, obj)
 
+
 @admin.register(Transaction)
 class TransactionAdmin(admin.ModelAdmin):
-    list_display = ['transaction_id', 'order', 'amount', 'payment_method', 'status', 'created_at']
+    list_display = ['transaction_id', 'order', 'amount',
+                    'payment_method', 'status', 'created_at']
     list_filter = ['status', 'payment_method', 'created_at']
-    search_fields = ['transaction_id', 'order__order_number', 'order__user__username', 'order__user__email']
+    search_fields = ['transaction_id', 'order__order_number',
+                     'order__user__username', 'order__user__email']
     readonly_fields = ['created_at', 'updated_at']
     raw_id_fields = ['order']
     fieldsets = (
@@ -88,10 +95,11 @@ class TransactionAdmin(admin.ModelAdmin):
         }),
     )
 
+
 @admin.register(OrderItem)
 class OrderItemAdmin(admin.ModelAdmin):
-    list_display = ['order', 'content_type', 'object_id', 'quantity', 'unit_price', 'total_price']
-    list_filter = ['content_type']
+    list_display = ['order', 'content_type', 'object_id',
+                    'quantity', 'unit_price', 'total_price']
     search_fields = ['order__order_number']
     raw_id_fields = ['order']
 
