@@ -17,7 +17,6 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path, include
 from django.utils.translation import gettext_lazy as _
-from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from django.conf import settings
 from django.conf.urls.static import static
 
@@ -27,11 +26,10 @@ urlpatterns = [
     path('api/v1/courses/', include(('courses.urls', 'courses'), namespace='courses')),
     path('api/v1/support/', include(('support.urls', 'support'), namespace='support')),
     # path('api/v1/taxonomy', include(('taxonomy.urls', 'taxonomy'), namespace='taxonomy')),
-    # path('api/v1/subscriptions/', include(('subscriptions.urls', 'subscriptions'), namespace='subscriptions')),
-    path('api/v1/auth/token/', TokenObtainPairView.as_view(),
-         name='token_obtain_pair'),
-    path('api/v1/auth/token/refresh/',
-         TokenRefreshView.as_view(), name='token_refresh'),
+    path('api/v1/subscriptions/', include(('subscriptions.urls',
+         'subscriptions'), namespace='subscriptions')),
+
+    path('api/v1/billing/', include(('billing.urls', 'billing'), namespace='billing')),
 ]
 
 # Add static file serving for development
