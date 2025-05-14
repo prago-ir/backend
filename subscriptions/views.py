@@ -91,11 +91,6 @@ class PragoPlusPlansView(APIView):
                 }
                 included_courses.append(course_data)
 
-            # Calculate savings compared to individual course prices
-            total_course_price = sum(
-                course.price for course in plan.included_courses.all())
-            savings = total_course_price - plan.price if total_course_price > plan.price else 0
-
             plan_data = {
                 'id': plan.id,
                 'name': plan.name,
@@ -104,9 +99,6 @@ class PragoPlusPlansView(APIView):
                 'price': float(plan.price),
                 'duration_days': plan.duration_days,
                 'included_courses_count': plan.included_courses.count(),
-                'included_courses': included_courses,
-                'savings': float(savings),
-                'savings_percentage': int((savings / total_course_price) * 100) if total_course_price > 0 else 0
             }
 
             plan_list.append(plan_data)
