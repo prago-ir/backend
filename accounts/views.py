@@ -8,10 +8,10 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.exceptions import ValidationError
 from rest_framework_simplejwt.tokens import RefreshToken
 
-
 from .models import OTP, MyUser, Profile
 from .serializers import MyUserSerializer
 from .tasks import send_otp_email, send_otp_sms
+from .utils import save_profile_picture
 
 
 # Add this new API view to your existing views.py file
@@ -40,6 +40,8 @@ class RequestOTPView(APIView):
             # Send Email
             email = identifier
         elif identifier.isdigit() or identifier.startswith("+"):
+            if identifier.startswith("+98"):
+                identifier = identifier.replace("+98", "0", 1)
             # Send SMS
             phone = identifier
 
@@ -120,6 +122,8 @@ class VerifyOTPView(APIView):
             # Send Email
             email = identifier
         elif identifier.isdigit() or identifier.startswith("+"):
+            if identifier.startswith("+98"):
+                identifier = identifier.replace("+98", "0", 1)
             # Send SMS
             phone = identifier
         else:
@@ -180,13 +184,60 @@ class VerifyOTPView(APIView):
 
 
 class CompleteSignupView(APIView):
-    permission_classes = [IsAuthenticated]
+    # permission_classes = [IsAuthenticated]
 
     def post(self, request):
-        serializer = MyUserSerializer(data=request.data)
+        # Get data from request
+        identifier = request.data.get('identifier')
+        first_name = request.data.get('first_name')
+        last_name = request.data.get('last_name')
+        username = request.data.get('username')
+
+        # Generate a random secure password
+        import secrets
+        import string
+        password_chars = string.ascii_letters + string.digits + string.punctuation
+        random_password = ''.join(secrets.choice(
+            password_chars) for _ in range(20))
+
+        # Create user data dictionary
+        user_data = {
+            'username': username,
+            'first_name': first_name,
+            'last_name': last_name,
+            'password': random_password,  # Set the random password
+        }
+
+        # Determine if identifier is email or phone
+        if '@' in identifier:
+            user_data['email'] = identifier
+        else:
+            if identifier.startswith("+98"):
+                identifier = identifier.replace("+98", "0", 1)
+            user_data['phone'] = identifier
+
+        serializer = MyUserSerializer(data=user_data)
+
         if serializer.is_valid():
             user = serializer.save()
-            return Response({"message": "Signup complete.", "user_id": user.id}, status=status.HTTP_201_CREATED)
+
+            # Generate tokens for the user
+            refresh = RefreshToken.for_user(user)
+            access_token = str(refresh.access_token)
+            refresh_token = str(refresh)
+
+            # Log in the user
+            user = authenticate(
+                email=user_data.get("email"), phone=user_data.get("phone"))
+            login(request, user)
+
+            return Response({
+                "message": "Signup complete.",
+                "user_id": user.id,
+                "access_token": access_token,
+                "refresh_token": refresh_token
+            }, status=status.HTTP_201_CREATED)
+
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
@@ -208,7 +259,7 @@ class LoginViaPassword(APIView):
 
 
 class CheckUsername(APIView):
-    permission_classes = [IsAuthenticated]
+    # permission_classes = [IsAuthenticated]
 
     def get(self, request):
         username = request.query_params.get('username')
@@ -295,8 +346,8 @@ class GoogleAuthView(APIView):
             return Response({"error": "Email is required"}, status=status.HTTP_400_BAD_REQUEST)
 
         # Check if a user with this email already exists
-        user = MyUser .objects.filter(email=email).first()
-        needs_profile = False
+        user = MyUser.objects.filter(email=email).first()
+        profile = Profile.objects.get(user=user) if user else None
 
         # If user doesn't exist, create a new one with Google data
         if not user:
@@ -308,6 +359,11 @@ class GoogleAuthView(APIView):
                     username=f"google_{sub[-8:]}",
                     is_active=True
                 )
+                # add google provided picture to the users profile
+                # profile is already created when user is created
+                profile = Profile.objects.get(user=user)
+                if data.get('picture'):
+                    save_profile_picture(profile, data.get('picture'), sub)
 
                 # Set user fields if provided
                 if data.get('name'):
@@ -323,9 +379,6 @@ class GoogleAuthView(APIView):
                 # Save user data
                 user.save()
 
-                # Flag that user needs to complete profile (add phone, etc.)
-                needs_profile = True
-
             except Exception as e:
                 return Response(
                     {"error": f"Failed to create user: {str(e)}"},
@@ -333,12 +386,17 @@ class GoogleAuthView(APIView):
                 )
 
         # Generate tokens for the user
+        user_data = {
+            "email": user.email,
+            "phone": user.phone,
+            "full_name": user.full_name(),
+            "image": profile.avatar.url if profile.avatar else None,
+        }
         refresh = RefreshToken.for_user(user)
 
         return Response({
             "message": "Google authentication successful",
-            "user_id": user.id,
-            "needs_profile": needs_profile,
+            "user_data": user_data,
             "access_token": str(refresh.access_token),
             "refresh_token": str(refresh),
         }, status=status.HTTP_200_OK)
