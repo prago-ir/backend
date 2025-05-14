@@ -6,12 +6,20 @@ app_name = 'subscriptions'
 urlpatterns = [
     # Subscription plan endpoints
     path('plans/', views.SubscriptionPlanListView.as_view(), name='plan_list'),
-    path('plans/<slug:slug>/', views.SubscriptionPlanDetailView.as_view(), name='plan_detail'),
-    
+    path('plans/<slug:slug>/',
+         views.SubscriptionPlanDetailView.as_view(), name='plan_detail'),
+
+    # Prago Plus specific plans
+    path('prago-plus-plans/', views.PragoPlusPlansView.as_view(),
+         name='prago_plus_plans'),
+
     # User subscription endpoints
-    path('my-subscriptions/', views.UserSubscriptionListView.as_view(), name='user_subscription_list'),
-    path('my-subscriptions/<int:id>/', views.UserSubscriptionDetailView.as_view(), name='user_subscription_detail'),
-    
+    path('my-subscriptions/', views.UserSubscriptionListView.as_view(),
+         name='user_subscription_list'),
+    path('my-subscriptions/<int:id>/', views.UserSubscriptionDetailView.as_view(),
+         name='user_subscription_detail'),
+
     # Direct subscription purchase endpoint
-    path('plans/<slug:slug>/purchase/', views.SubscriptionPurchaseView.as_view(), name='subscription_purchase'),
+    path('plans/<slug:slug>/purchase/',
+         views.SubscriptionPurchaseView.as_view(), name='subscription_purchase'),
 ]
