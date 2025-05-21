@@ -14,6 +14,9 @@ from billing.models import Order, Transaction
 import uuid
 import json
 import requests
+import logging  # Import logging
+
+logger = logging.getLogger(__name__)  # Get a logger instance
 
 
 class SubscriptionPlanListView(generics.ListAPIView):
@@ -262,6 +265,53 @@ class UserSubscriptionDetailView(APIView):
         }
 
         return Response(subscription_data)
+
+
+class ActiveUserSubscriptionView(APIView):
+    """
+    View for retrieving the active subscription for the current user.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+
+        active_subscription = UserSubscription.objects.filter(
+            user=user,
+            is_active=True,
+            end_date__gt=timezone.now()
+        ).order_by('-end_date').first()
+
+        if not active_subscription:
+            return Response({"message": "No active subscription found."}, status=status.HTTP_404_NOT_FOUND)
+
+        now = timezone.now()
+        remaining_days = (active_subscription.end_date -
+                          now).days if active_subscription.end_date > now else 0
+
+        total_duration_days = active_subscription.subscription_plan.duration_days
+        progress_percentage = 0
+        if active_subscription.is_valid() and total_duration_days > 0:
+            # Calculate percentage based on days passed relative to total duration
+            # Ensure start_date is not in the future for this calculation
+            if active_subscription.start_date <= now:
+                days_passed = (now - active_subscription.start_date).days
+                # Ensure days_passed is not negative and not more than total_duration_days
+                days_passed = max(0, min(days_passed, total_duration_days))
+                # Percentage of time *used*
+                # progress_percentage = int((days_passed / total_duration_days) * 100)
+                # Percentage of time *remaining*
+                progress_percentage = int(
+                    (remaining_days / total_duration_days) * 100) if remaining_days > 0 else 0
+            else:  # Subscription hasn't started yet
+                progress_percentage = 100  # Full time remaining
+
+        data = {
+            'plan_name': active_subscription.subscription_plan.name,
+            'remaining_days': remaining_days,
+            'progress_percentage': progress_percentage,
+        }
+        return Response(data, status=status.HTTP_200_OK)
 
 
 class SubscriptionPurchaseView(APIView):

@@ -18,6 +18,9 @@ urlpatterns = [
          name='user_subscription_list'),
     path('my-subscriptions/<int:id>/', views.UserSubscriptionDetailView.as_view(),
          name='user_subscription_detail'),
+    # Add new path for active subscription
+    path('my-active-subscription/', views.ActiveUserSubscriptionView.as_view(),
+         name='user_active_subscription_detail'),
 
     # Direct subscription purchase endpoint
     path('plans/<slug:slug>/purchase/',
