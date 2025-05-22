@@ -12,10 +12,9 @@ urlpatterns = [
          name='popular-courses'),
     path('etc/latest-roadmaps/', LatestRoadmapView.as_view(), name='latest-roadmaps'),
     path('', CourseListView.as_view(), name='course-list'),
+    path('my-courses/', OwnedCoursesView.as_view(), name='owned-courses'),
     path('<slug:slug>/', CourseDetailView.as_view(), name='course-detail'),
 
-    # Authenticated user endpoints
-    path('my-courses/', OwnedCoursesView.as_view(), name='owned-courses'),
     path('dashboard/courses/<slug:slug>/',
          DashboardCourseDetailView.as_view(), name='dashboard-course-detail'),
     path('<slug:slug>/enroll/',

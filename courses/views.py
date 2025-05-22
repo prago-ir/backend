@@ -248,20 +248,22 @@ class OwnedCoursesView(APIView):
             is_active=True
         ).select_related('course')
 
-        # Extract courses from enrollments
-        courses = [enrollment.course for enrollment in enrollments]
-
-        # Add enrollment data to each course
         course_data = []
-        for course, enrollment in zip(courses, enrollments):
-            course_serializer = CourseSerializer(course)
-            data = course_serializer.data
-            data['enrollment'] = {
-                'enrolled_at': enrollment.enrolled_at,
-                'last_accessed_at': enrollment.last_accessed_at,
-                'completion_percentage': enrollment.completion_percentage
+        for enrollment in enrollments:
+            course = enrollment.course
+            item_data = {
+                'course': {
+                    'cover_image_url': course.cover_image.url if course.cover_image else None,
+                    'title': course.title,
+                    'slug': course.slug,
+                },
+                'enrollment': {
+                    'enrolled_at': enrollment.enrolled_at.isoformat(),
+                    'last_accessed_at': enrollment.last_accessed_at.isoformat() if enrollment.last_accessed_at else None,
+                    'completion_percentage': enrollment.completion_percentage
+                }
             }
-            course_data.append(data)
+            course_data.append(item_data)
 
         return Response(course_data, status=status.HTTP_200_OK)
 

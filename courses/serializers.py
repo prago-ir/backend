@@ -15,61 +15,42 @@ class AttributeSerializer(serializers.ModelSerializer):
 
 
 class EpisodeSerializer(serializers.ModelSerializer):
-    duration_formatted = serializers.SerializerMethodField()
-    file_size_formatted = serializers.SerializerMethodField()
-    is_free = serializers.SerializerMethodField()
     content_url = serializers.SerializerMethodField()
+    is_free = serializers.SerializerMethodField()
 
     class Meta:
         model = Episode
-        fields = ['id', 'title', 'type', 'thumbnail', 'content_url', 'description',
-                  'duration', 'duration_formatted', 'file_size', 'file_size_formatted',
-                  'order', 'status', 'published_at', 'is_free']
-
-    def get_duration_formatted(self, obj):
-        return obj.get_formatted_duration()
-
-    def get_file_size_formatted(self, obj):
-        return obj.get_formatted_file_size()
+        fields = [
+            'id', 'title', 'description', 'type', 'order',
+            'duration', 'file_size', 'thumbnail', 'content_url',
+            'status', 'published_at', 'chapter', 'course', 'is_free'
+        ]
+        read_only_fields = ['order', 'is_free']
 
     def get_is_free(self, obj):
-        # Get the first two episodes by order from this course
+        # Determine if the episode is one of the first two free ones
         first_two_episodes = Episode.objects.filter(
             course=obj.course,
             status='published',
-            type='video'
-        ).order_by('order')[:2]
+            # Consider if 'type' filter is needed here, e.g., only 'video'
+            type='video',
+            # Order by chapter then episode order
+        ).order_by('chapter__number', 'order')[:2]
 
-        # Check if current episode is one of the first two
-        return obj in first_two_episodes
+        # Create a list of IDs for efficient checking
+        first_two_episode_ids = [ep.id for ep in first_two_episodes]
+        return obj.id in first_two_episode_ids
 
     def get_content_url(self, obj):
         request = self.context.get('request')
         user = request.user if request and hasattr(request, 'user') else None
 
-        # Get the first two episodes by order from this course
-        first_two_episodes = Episode.objects.filter(
-            course=obj.course,
-            status='published',
-            type='video'
-        ).order_by('order')[:2]
-
-        # If episode is free (first two), always show content URL
-        if obj in first_two_episodes:
+        # Use the is_free logic from get_is_free
+        if self.get_is_free(obj):
             return obj.content_url
 
-        # If user is authenticated, check for access
+        # If user is authenticated, check for subscription access
         if user and user.is_authenticated:
-            # Check if user has purchased this course (direct enrollment)
-            has_direct_enrollment = Enrollment.objects.filter(
-                user=user,
-                course=obj.course,
-                is_active=True
-            ).exists()
-
-            if has_direct_enrollment:
-                return obj.content_url
-
             # Check if user has an active subscription that includes this course
             has_subscription_access = UserSubscription.objects.filter(
                 user=user,
@@ -81,7 +62,8 @@ class EpisodeSerializer(serializers.ModelSerializer):
             if has_subscription_access:
                 return obj.content_url
 
-        # Otherwise, don't provide the content URL
+        # Otherwise, (not free, not authenticated, or no subscription access)
+        # don't provide the content URL
         return None
 
 
