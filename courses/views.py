@@ -1,6 +1,6 @@
 from rest_framework import status
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny  # Import AllowAny
 from rest_framework.views import APIView
 from django.shortcuts import get_object_or_404
 from django.db.models import Count, Q, Case, When, Value, IntegerField
@@ -11,6 +11,7 @@ from .serializers import CourseSerializer, CourseDetailSerializer, EpisodeSerial
 from enrollments.models import Enrollment, UserProgress
 from taxonomy.serializers import CategorySerializer
 from accounts.serializers import OrganizerSerializer
+from subscriptions.models import UserSubscription  # Add this import
 
 
 class LatestRoadmapView(APIView):
@@ -55,6 +56,8 @@ class PopularCoursesView(APIView):
 
 
 class CourseListView(APIView):
+    permission_classes = [AllowAny]  # Add this line to allow public access
+
     def get(self, request):
         # Get all published courses
         courses_queryset = Course.objects.filter(
@@ -125,6 +128,7 @@ class CourseListView(APIView):
 
 class CourseDetailView(APIView):
     """View to get course details and related courses"""
+    permission_classes = [AllowAny]  # Add this line to allow public access
 
     def get(self, request, slug):
         # Get the course by slug
@@ -181,6 +185,8 @@ class CourseDetailView(APIView):
 
         # Check if user is enrolled in this course
         is_enrolled = False
+        active_granting_subscription_data = None  # Initialize
+
         if request.user.is_authenticated:
             is_enrolled = Enrollment.objects.filter(
                 user=request.user,
@@ -188,9 +194,29 @@ class CourseDetailView(APIView):
                 is_active=True
             ).exists()
 
+            # Find active subscription that grants access to THIS course
+            granting_subscription = UserSubscription.objects.filter(
+                user=request.user,
+                is_active=True,
+                end_date__gt=timezone.now(),
+                subscription_plan__included_courses=course
+            ).order_by('-end_date').first()  # Get the one that ends latest
+
+            if granting_subscription:
+                now = timezone.now()
+                remaining_days = (granting_subscription.end_date -
+                                  now).days if granting_subscription.end_date > now else 0
+                active_granting_subscription_data = {
+                    'plan_name': granting_subscription.subscription_plan.name,
+                    'end_date': granting_subscription.end_date.isoformat(),
+                    'remaining_days': remaining_days,
+                    'plan_slug': granting_subscription.subscription_plan.slug
+                }
+
         # Serialize course data
         serializer = CourseDetailSerializer(
-            course, context={'is_enrolled': is_enrolled})
+            # Ensure request is in context
+            course, context={'request': request, 'is_enrolled': is_enrolled})
 
         # Serialize related courses
         related_serializer = CourseSerializer(related_courses, many=True)
@@ -200,10 +226,15 @@ class CourseDetailView(APIView):
             'chapters': chapter_list,
         })
 
-        return Response({
+        response_payload = {
             'course': course_response_data,
             'related_courses': related_serializer.data
-        }, status=status.HTTP_200_OK)
+        }
+
+        if active_granting_subscription_data:
+            response_payload['active_granting_subscription'] = active_granting_subscription_data
+
+        return Response(response_payload, status=status.HTTP_200_OK)
 
 
 class OwnedCoursesView(APIView):
@@ -325,24 +356,32 @@ class CourseEnrollmentView(APIView):
             Course,
             slug=slug,
             status='published',
-            published_at__lte=timezone.now()
+            # Ensure published_at is not in the future if you use it as a gate
+            # published_at__lte=timezone.now() # This line can be strict, consider if needed
         )
 
         # Check if already enrolled
-        if Enrollment.objects.filter(user=request.user, course=course).exists():
+        existing_enrollment = Enrollment.objects.filter(
+            user=request.user, course=course).first()
+        if existing_enrollment:
+            if not existing_enrollment.is_active:  # Ensure enrollment is active
+                existing_enrollment.is_active = True
+                existing_enrollment.save(update_fields=['is_active'])
+            return Response({
+                "detail": "User is already enrolled in this course.",
+                "enrollment_id": existing_enrollment.id,
+                "enrolled_at": existing_enrollment.enrolled_at.isoformat(),
+            }, status=status.HTTP_200_OK)
+
+        # Check if course is accessible for free for this user (e.g., via subscription)
+        # The model method course.is_free_for_user(request.user) checks this
+        if not course.is_free_for_user(request.user):
             return Response(
-                {"detail": "You are already enrolled in this course."},
-                status=status.HTTP_400_BAD_REQUEST
+                {"detail": "Course access not granted. Subscription required or course is not part of an active subscription."},
+                status=status.HTTP_403_FORBIDDEN
             )
 
-        # Check if course is free for this user via subscription
-        is_free = course.is_free_for_user(request.user)
-
-        # If not free, this would typically redirect to payment
-        # But for this endpoint, we'll just create the enrollment
-        # In a real system, you'd handle payment before creating enrollment
-
-        # Create enrollment
+        # Create enrollment if accessible and not yet enrolled
         enrollment = Enrollment.objects.create(
             user=request.user,
             course=course,
@@ -352,7 +391,7 @@ class CourseEnrollmentView(APIView):
         return Response({
             "detail": "Successfully enrolled in course",
             "enrollment_id": enrollment.id,
-            "enrolled_at": enrollment.enrolled_at,
+            "enrolled_at": enrollment.enrolled_at.isoformat(),
         }, status=status.HTTP_201_CREATED)
 
 

@@ -26,14 +26,30 @@ class OTPSerializer(serializers.ModelSerializer):
 
 
 class OrganizerSerializer(serializers.ModelSerializer):
+    organization_logo_url = serializers.SerializerMethodField()
+
     class Meta:
         model = Organizer
         fields = ['id', 'organization_name',
-                  'organization_logo', 'organization_description']
+                  # Changed organization_logo to organization_logo_url
+                  'organization_logo_url', 'organization_description']
+
+    def get_organization_logo_url(self, obj):
+        if obj.organization_logo:
+            # This will be the relative path starting with MEDIA_URL
+            return obj.organization_logo.url
+        return None
 
 
 class TeacherSerializer(serializers.ModelSerializer):
+    avatar_url = serializers.SerializerMethodField()
+
     class Meta:
         model = Teacher
-        fields = ['id', 'full_name', 'avatar',
+        fields = ['id', 'full_name', 'avatar_url',  # Changed avatar to avatar_url
                   'biography', 'number_of_courses']
+
+    def get_avatar_url(self, obj):
+        if obj.avatar:
+            return obj.avatar.url  # This will be the relative path starting with MEDIA_URL
+        return None

@@ -4,7 +4,7 @@ from django.contrib.auth import authenticate, login, logout
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.exceptions import ValidationError
 from rest_framework_simplejwt.tokens import RefreshToken
 
@@ -30,7 +30,7 @@ class UserInfoView(APIView):
 
 
 class RequestOTPView(APIView):
-    # permission_classes = [IsAuthenticated]
+    permission_classes = [AllowAny]
 
     def post(self, request):
         identifier = request.data.get('identifier')
@@ -100,7 +100,7 @@ class RequestOTPView(APIView):
 
 
 class VerifyOTPView(APIView):
-    # permission_classes = [IsAuthenticated]
+    permission_classes = [AllowAny]
 
     def post(self, request):
         otp = request.data.get('otp')
@@ -184,7 +184,7 @@ class VerifyOTPView(APIView):
 
 
 class CompleteSignupView(APIView):
-    # permission_classes = [IsAuthenticated]
+    permission_classes = [AllowAny]
 
     def post(self, request):
         # Get data from request
@@ -242,7 +242,7 @@ class CompleteSignupView(APIView):
 
 
 class LoginViaPassword(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [AllowAny]
 
     def post(self, request):
         email = request.data.get('email')
@@ -259,7 +259,7 @@ class LoginViaPassword(APIView):
 
 
 class CheckUsername(APIView):
-    # permission_classes = [IsAuthenticated]
+    permission_classes = [AllowAny]
 
     def get(self, request):
         username = request.query_params.get('username')
@@ -336,6 +336,7 @@ class GoogleAuthView(APIView):
     """
     Handle Google OAuth authentication data from frontend
     """
+    permission_classes = [AllowAny]
 
     def post(self, request):
         data = request.data
