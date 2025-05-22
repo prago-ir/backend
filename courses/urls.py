@@ -18,7 +18,7 @@ urlpatterns = [
     path('my-courses/', OwnedCoursesView.as_view(), name='owned-courses'),
     path('dashboard/courses/<slug:slug>/',
          DashboardCourseDetailView.as_view(), name='dashboard-course-detail'),
-    path('courses/<slug:slug>/enroll/',
+    path('<slug:slug>/enroll/',
          CourseEnrollmentView.as_view(), name='course-enroll'),
     path('episodes/<int:episode_id>/progress/',
          UpdateProgressView.as_view(), name='update-progress'),
