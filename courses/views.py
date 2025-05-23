@@ -16,6 +16,7 @@ from subscriptions.models import UserSubscription  # Add this import
 
 class LatestRoadmapView(APIView):
     """View to get the last three published roadmaps for home page"""
+    permission_classes = [AllowAny]  # Add this line to allow public access
 
     def get(self, request):
         queryset = RoadMap.objects.filter(
@@ -29,6 +30,7 @@ class LatestRoadmapView(APIView):
 
 class LatestCoursesView(APIView):
     """View to get the last six published courses for home page"""
+    permission_classes = [AllowAny]  # Add this line to allow public access
 
     def get(self, request):
         # Get last 6 published courses ordered by published date
@@ -43,6 +45,7 @@ class LatestCoursesView(APIView):
 
 class PopularCoursesView(APIView):
     """View to get the most popular courses"""
+    permission_classes = [AllowAny]  # Add this line to allow public access
 
     def get(self, request):
         # Get popular courses ordered by enrollment count
