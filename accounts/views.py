@@ -269,11 +269,20 @@ class CheckUsername(APIView):
 
 
 class LogoutView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = (IsAuthenticated, AllowAny)
 
     def post(self, request):
-        request.user.logout()
-        return Response({"message": "Logout successful."}, status=status.HTTP_200_OK)
+        try:
+            refresh_token = request.data.get('refresh')
+            if not refresh_token:
+                return Response({"error": "Refresh token is required."}, status=status.HTTP_400_BAD_REQUEST)
+
+            token = RefreshToken(refresh_token)
+            token.blacklist()
+            return Response({"detail": "Successfully logged out."}, status=status.HTTP_200_OK)
+        except Exception as e:
+            # Log the exception e
+            return Response({"detail": "Error logging out."}, status=status.HTTP_400_BAD_REQUEST)
 
 
 class RequestResetPassword(APIView):
