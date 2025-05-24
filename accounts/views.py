@@ -11,9 +11,11 @@ from rest_framework.exceptions import ValidationError
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from .models import OTP, MyUser, Profile
-from .serializers import MyUserSerializer
+# Add UserProfileSerializer
+from .serializers import MyUserSerializer, UserProfileSerializer
 from .tasks import send_otp_email, send_otp_sms
 from .utils import save_profile_picture
+from rest_framework.parsers import MultiPartParser, FormParser  # For file uploads
 
 
 # Add this new API view to your existing views.py file
@@ -449,3 +451,30 @@ class TotalUsersCountView(APIView):
         User = get_user_model()
         total_users = User.objects.count()
         return Response({"total_users": total_users}, status=status.HTTP_200_OK)
+
+
+class UserProfileUpdateView(APIView):
+    permission_classes = [IsAuthenticated]
+    parser_classes = [MultiPartParser, FormParser]  # To handle image uploads
+
+    def get(self, request):
+        """
+        Retrieve the authenticated user's profile information.
+        """
+        user = request.user
+        serializer = UserProfileSerializer(user, context={'request': request})
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    def put(self, request):
+        """
+        Update the authenticated user's profile information.
+        """
+        user = request.user
+        # Pass context to serializer for username/email validation and avatar URL generation
+        serializer = UserProfileSerializer(
+            user, data=request.data, partial=True, context={'request': request})
+
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
