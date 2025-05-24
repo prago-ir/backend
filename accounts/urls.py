@@ -20,6 +20,8 @@ urlpatterns = [
          name='token_obtain_pair'),
     path('token/refresh/',
          TokenRefreshView.as_view(), name='token_refresh'),
+    path('statistics/total-users/',
+         views.TotalUsersCountView.as_view(), name='total_users_count'),
     #     path('reset-password/', views.ResetPasswordView.as_view(), name='change_password'),
     #     path('login-via-password/', views.LoginViaPassword.as_view(), name='login_via_password'),
 ]

@@ -1,7 +1,8 @@
 from .models import MyUser  # Make sure MyUser is imported
 import pyotp
 from django.contrib.auth.tokens import PasswordResetTokenGenerator
-from django.contrib.auth import authenticate, login, logout
+# Recommended way to get the User model
+from django.contrib.auth import authenticate, login, logout, get_user_model
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
@@ -429,3 +430,13 @@ class CheckIdentifierExistsView(APIView):
             user_exists = MyUser.objects.filter(phone=phone).exists()
 
         return Response({"exists": user_exists, "identifier": normalized_identifier}, status=status.HTTP_200_OK)
+
+
+class TotalUsersCountView(APIView):
+    # Or IsAuthenticated if you want only logged-in users to see this
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        User = get_user_model()
+        total_users = User.objects.count()
+        return Response({"total_users": total_users}, status=status.HTTP_200_OK)
