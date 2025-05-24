@@ -12,12 +12,13 @@ class TicketMessageAttachmentSerializer(serializers.ModelSerializer):
     class Meta:
         model = TicketMessageAttachment
         fields = ['id', 'file', 'file_url', 'content_type', 'uploaded_at']
+        # 'file' is still needed for the relative path
         read_only_fields = ['file_url', 'uploaded_at']
 
     def get_file_url(self, obj):
-        request = self.context.get('request')
-        if obj.file and request:
-            return request.build_absolute_uri(obj.file.url)
+        # obj.file.url already provides the path starting with MEDIA_URL (e.g., /media/...)
+        if obj.file:
+            return obj.file.url
         return None
 
 
@@ -40,14 +41,12 @@ class SenderDetailSerializer(serializers.ModelSerializer):
         return user_obj.username
 
     def get_image(self, user_obj):
-        request = self.context.get('request')
         # Attempt to get profile and avatar
         # This assumes a OneToOneField named 'profile' from User to Profile model
         # and an ImageField named 'avatar' on the Profile model.
         try:
             if hasattr(user_obj, 'profile') and user_obj.profile.avatar:
-                if request:
-                    return request.build_absolute_uri(user_obj.profile.avatar.url)
+                # user_obj.profile.avatar.url already provides the path starting with MEDIA_URL
                 return user_obj.profile.avatar.url
         except AttributeError:  # Handles if 'profile' or 'profile.avatar' doesn't exist
             pass
@@ -140,5 +139,8 @@ class TicketDetailSerializer(serializers.ModelSerializer):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         # Ensure context is passed to nested serializers if needed for URL building
+        # This is less critical now that we are returning relative URLs directly from .url
+        # but good practice if other nested serializers might need the request context.
         if 'context' in kwargs:
-            self.fields['messages'].context.update(kwargs['context'])
+            if hasattr(self.fields.get('messages'), 'context'):
+                self.fields['messages'].context.update(kwargs['context'])
