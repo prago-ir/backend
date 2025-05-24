@@ -19,7 +19,9 @@ class TicketListView(APIView):
         """Return list of all tickets for the authenticated user"""
         queryset = Ticket.objects.filter(
             user=request.user).order_by('-created_at')
-        serializer = TicketSerializer(queryset, many=True)
+        # Pass context to serializer
+        serializer = TicketSerializer(
+            queryset, many=True, context={'request': request})
         return Response(serializer.data)
 
 
@@ -32,7 +34,9 @@ class TicketDetailView(APIView):
         """Get detailed information about a specific ticket"""
         ticket = get_object_or_404(
             Ticket, ticket_number=ticket_number, user=request.user)
-        serializer = TicketDetailSerializer(ticket)
+        # Pass context to serializer
+        serializer = TicketDetailSerializer(
+            ticket, context={'request': request})
         return Response(serializer.data)
 
     def post(self, request, ticket_number):
@@ -40,39 +44,53 @@ class TicketDetailView(APIView):
         ticket = get_object_or_404(
             Ticket, ticket_number=ticket_number, user=request.user)
 
-        # Don't allow messages on closed tickets
         if ticket.status in ['closed', 'resolved']:
             return Response(
                 {"detail": "Cannot add messages to a closed or resolved ticket."},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        # Create message
-        message_data = {
+        # Prepare data for the message serializer
+        # Note: 'sender' here should be the user instance, not just ID,
+        # if TicketMessageSerializer expects an instance for its create method
+        # or if you rely on the serializer to handle the User instance.
+        # However, since we marked 'sender' as write_only: True and it's a ForeignKey,
+        # passing the ID is typical. The serializer's 'save' method will handle it.
+        # For clarity, we can pass the instance directly if the serializer is set up for it.
+        # Let's assume the serializer's 'sender' field (FK) will correctly handle request.user.id
+
+        message_data_for_serializer = {
             'ticket': ticket.id,
-            'sender': request.user.id,
+            'sender': request.user.id,  # Pass the user ID for creation
             'message': request.data.get('message', '')
         }
 
-        message_serializer = TicketMessageSerializer(data=message_data)
+        # Pass context to serializer
+        message_serializer = TicketMessageSerializer(
+            data=message_data_for_serializer, context={'request': request})
         if message_serializer.is_valid():
-            message = message_serializer.save()
+            # When saving, the serializer's 'sender' field (ForeignKey) will use the provided ID.
+            # If you needed to pass the actual user instance to the serializer's create method,
+            # you could do: message_serializer.save(sender=request.user)
+            # But with 'sender': {'write_only': True} and it being a FK, validated_data['sender'] will be the ID.
+            message = message_serializer.save()  # sender ID is already in validated_data
 
-            # Process attachments if any
             files = request.FILES.getlist('attachments')
-            for file in files:
+            for file_obj in files:  # Changed 'file' to 'file_obj'
                 TicketMessageAttachment.objects.create(
                     message=message,
-                    file=file,
-                    content_type=file.content_type
+                    file=file_obj,
+                    content_type=file_obj.content_type
                 )
 
-            # Update ticket
             ticket.updated_at = timezone.now()
+            # If the ticket status should change to 'customer_reply' or similar on new message
+            # ticket.status = 'customer_reply' # Example
             ticket.save()
 
-            # Return updated ticket details
-            serializer = TicketDetailSerializer(ticket)
+            # Pass context to serializer for the response
+            serializer = TicketDetailSerializer(
+                ticket, context={'request': request})
             return Response(serializer.data)
 
         return Response(message_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -82,12 +100,13 @@ class TicketDetailView(APIView):
         ticket = get_object_or_404(
             Ticket, ticket_number=ticket_number, user=request.user)
 
-        # Only allow updating status
         if 'status' in request.data:
             ticket.status = request.data['status']
             ticket.save()
 
-        serializer = TicketDetailSerializer(ticket)
+        # Pass context to serializer
+        serializer = TicketDetailSerializer(
+            ticket, context={'request': request})
         return Response(serializer.data)
 
 
@@ -98,44 +117,50 @@ class TicketCreateView(APIView):
 
     def post(self, request):
         """Create a new support ticket with optional initial message and attachments"""
-        # Generate unique ticket number
         ticket_number = f"TCK-{uuid.uuid4().hex[:8].upper()}"
-
-        # Prepare data for the serializer from the request and generated values.
-        # Do not include 'user' here; it will be passed to save().
         ticket_data_for_serializer = {
             'ticket_number': ticket_number,
             'subject': request.data.get('subject', ''),
             'department': request.data.get('department', 'support'),
-            # 'status' will use the model's default if not specified by the serializer or model
         }
 
-        ticket_serializer = TicketSerializer(data=ticket_data_for_serializer)
+        # Pass context to serializer
+        ticket_serializer = TicketSerializer(
+            data=ticket_data_for_serializer, context={'request': request})
         if ticket_serializer.is_valid():
-            # Pass the user instance directly to the save method.
-            # This ensures the 'user' field of the Ticket model is populated.
             ticket = ticket_serializer.save(user=request.user)
 
-            # Create initial message if provided
-            initial_message = request.data.get('message', '')
-            if initial_message:
-                message = TicketMessage.objects.create(
-                    ticket=ticket,
-                    sender=request.user,
-                    message=initial_message
-                )
+            initial_message_content = request.data.get('message', '')
+            if initial_message_content:
+                # For creating the initial message, we can directly create the object
+                # or use the serializer. Using the serializer ensures consistency.
+                message_data = {
+                    'ticket': ticket.id,
+                    'sender': request.user.id,  # User ID
+                    'message': initial_message_content
+                }
+                # Pass context to message serializer
+                initial_message_serializer = TicketMessageSerializer(
+                    data=message_data, context={'request': request})
+                if initial_message_serializer.is_valid():
+                    initial_message_instance = initial_message_serializer.save()
 
-                # Process attachments if any
-                files = request.FILES.getlist('attachments')
-                for file_obj in files:  # Renamed 'file' to 'file_obj' for clarity
-                    TicketMessageAttachment.objects.create(
-                        message=message,
-                        file=file_obj,
-                        content_type=file_obj.content_type
-                    )
+                    files = request.FILES.getlist('attachments')
+                    for file_obj in files:  # Changed 'file' to 'file_obj'
+                        TicketMessageAttachment.objects.create(
+                            message=initial_message_instance,
+                            file=file_obj,
+                            content_type=file_obj.content_type
+                        )
+                else:
+                    # If initial message fails validation, we might want to roll back ticket creation
+                    # or return errors. For now, let's log and proceed with ticket creation response.
+                    print(
+                        f"Error creating initial message: {initial_message_serializer.errors}")
 
-            # Return created ticket with details
-            detail_serializer = TicketDetailSerializer(ticket)
+            # Pass context to serializer for the response
+            detail_serializer = TicketDetailSerializer(
+                ticket, context={'request': request})
             return Response(detail_serializer.data, status=status.HTTP_201_CREATED)
 
         return Response(ticket_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
