@@ -1,3 +1,4 @@
+from .models import MyUser  # Make sure MyUser is imported
 import pyotp
 from django.contrib.auth.tokens import PasswordResetTokenGenerator
 from django.contrib.auth import authenticate, login, logout
@@ -103,84 +104,81 @@ class VerifyOTPView(APIView):
     permission_classes = [AllowAny]
 
     def post(self, request):
-        otp = request.data.get('otp')
-        identifier = request.data.get('identifier')
+        otp_from_request = request.data.get('otp')
+        identifier_from_request = request.data.get('identifier')
 
-        # Debug info
-        print(
-            f"Received OTP verification request: identifier={identifier}, otp={otp}")
-
-        # Validate required fields
-        if not otp:
+        if not otp_from_request:
             return Response({"error": "OTP is required."}, status=status.HTTP_400_BAD_REQUEST)
-        if not identifier:
+        if not identifier_from_request:
             return Response({"error": "Identifier is required."}, status=status.HTTP_400_BAD_REQUEST)
 
         email, phone = None, None
+        normalized_identifier_for_lookup = identifier_from_request
 
-        if "@" in identifier:
-            # Send Email
-            email = identifier
-        elif identifier.isdigit() or identifier.startswith("+"):
-            if identifier.startswith("+98"):
-                identifier = identifier.replace("+98", "0", 1)
-            # Send SMS
-            phone = identifier
+        if "@" in identifier_from_request:
+            email = identifier_from_request
+        elif identifier_from_request.isdigit() or identifier_from_request.startswith("+"):
+            temp_phone = identifier_from_request
+            if identifier_from_request.startswith("+98"):
+                temp_phone = identifier_from_request.replace("+98", "0", 1)
+            phone = temp_phone
+            normalized_identifier_for_lookup = temp_phone
         else:
             return Response({"error": "Invalid identifier format."}, status=status.HTTP_400_BAD_REQUEST)
 
+        if email:
+            phone_for_lookup = None
+            email_for_lookup = email
+        elif phone:
+            email_for_lookup = None
+            phone_for_lookup = phone
+        else:
+            return Response({"error": "Identifier could not be processed."}, status=status.HTTP_400_BAD_REQUEST)
+
         try:
-            # Debug info
-            print(f"Looking up OTP record for email={email}, phone={phone}")
+            otp_record = OTP.objects.get(
+                email=email_for_lookup, phone=phone_for_lookup)
 
-            otp_record = OTP.objects.get(email=email, phone=phone)
             totp = pyotp.TOTP(otp_record.secret)
+            is_verified = totp.verify(otp_from_request, valid_window=1)
 
-            # Verify the OTP
-            if totp.verify(otp):
-                # Check if the user exists
-                user = MyUser.objects.filter(email=email).first(
-                ) or MyUser.objects.filter(phone=phone).first()
-                if user:
-                    # Generate tokens for the authenticated user
+            if is_verified:
+                user_exists_check = MyUser.objects.filter(email=email_for_lookup).exists(
+                ) if email_for_lookup else MyUser.objects.filter(phone=phone_for_lookup).exists()
+
+                if user_exists_check:
+                    user = MyUser.objects.filter(email=email_for_lookup).first(
+                    ) if email_for_lookup else MyUser.objects.filter(phone=phone_for_lookup).first()
+
                     refresh = RefreshToken.for_user(user)
-                    access_token = str(refresh.access_token)
-                    refresh_token = str(refresh)
-
-                    # Still login the user for session-based auth if needed
-                    user = authenticate(email=email, phone=phone)
-                    login(request, user)
-
                     profile = Profile.objects.get(user=user)
-
-                    # send a dict from user with all the user data
                     user_data = {
                         "email": user.email,
                         "phone": user.phone,
                         "full_name": user.full_name(),
                         "image": profile.avatar.url if profile.avatar else None,
                     }
-
                     return Response({
                         "message": "Login successful.",
                         "user_data": user_data,
-                        "access_token": access_token,
-                        "refresh_token": refresh_token
+                        "access_token": str(refresh.access_token),
+                        "refresh_token": str(refresh)
                     }, status=status.HTTP_200_OK)
                 else:
-                    # No existing user, they need to sign up
                     return Response({
                         "message": "OTP verified. Proceed to signup.",
                         "needs_signup": True,
-                        "identifier": identifier,  # Return the identifier to use in the signup
-                        # Generate tokens that can be used for the signup process
-                        # A temporary token for the signup step
+                        "identifier": normalized_identifier_for_lookup,
                         "temp_token": str(pyotp.random_base32())
                     }, status=status.HTTP_200_OK)
             else:
-                return Response({"error": f"Invalid OTP."}, status=status.HTTP_400_BAD_REQUEST)
+                return Response({"error": "Invalid OTP."}, status=status.HTTP_400_BAD_REQUEST)
         except OTP.DoesNotExist:
-            return Response({"error": "OTP record not found."}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"error": "OTP record not found. Please request a new OTP."}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            # Consider logging this error to a file or monitoring service in production
+            # For now, just returning a generic error
+            return Response({"error": "An unexpected error occurred during OTP verification."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 class CompleteSignupView(APIView):
@@ -401,3 +399,33 @@ class GoogleAuthView(APIView):
             "access_token": str(refresh.access_token),
             "refresh_token": str(refresh),
         }, status=status.HTTP_200_OK)
+
+
+class CheckIdentifierExistsView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        identifier = request.data.get('identifier')
+        if not identifier:
+            return Response({"error": "Identifier is required."}, status=status.HTTP_400_BAD_REQUEST)
+
+        email, phone = None, None
+        normalized_identifier = identifier  # Keep original for response if needed
+
+        if "@" in identifier:
+            email = identifier
+        elif identifier.isdigit() or identifier.startswith("+"):
+            phone = identifier
+            if phone.startswith("+98"):
+                phone = phone.replace("+98", "0", 1)
+            # You might want to add more phone normalization/validation here
+        else:
+            return Response({"error": "Invalid identifier format."}, status=status.HTTP_400_BAD_REQUEST)
+
+        user_exists = False
+        if email:
+            user_exists = MyUser.objects.filter(email__iexact=email).exists()
+        elif phone:
+            user_exists = MyUser.objects.filter(phone=phone).exists()
+
+        return Response({"exists": user_exists, "identifier": normalized_identifier}, status=status.HTTP_200_OK)
