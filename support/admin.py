@@ -36,7 +36,6 @@ class TicketAdmin(admin.ModelAdmin):
                      'user__username', 'user__email']
     readonly_fields = ['created_at', 'updated_at']
     inlines = [TicketMessageInline]
-    date_hierarchy = 'created_at'
 
     fieldsets = [
         ('Ticket Information', {
@@ -59,7 +58,7 @@ class TicketMessageAdmin(admin.ModelAdmin):
     inlines = [TicketMessageAttachmentInline]
 
     def ticket_link(self, obj):
-        url = f'/admin/support/ticket/{obj.ticket.id}/change/'
+        url = f'/admin/support/ticketmessage/{obj.ticket.id}/change/'
         return format_html('<a href="{}">{}</a>', url, obj.ticket.ticket_number)
 
     ticket_link.short_description = 'Ticket'

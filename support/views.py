@@ -101,17 +101,20 @@ class TicketCreateView(APIView):
         # Generate unique ticket number
         ticket_number = f"TCK-{uuid.uuid4().hex[:8].upper()}"
 
-        # Create ticket
-        ticket_data = {
-            'user': request.user.id,
+        # Prepare data for the serializer from the request and generated values.
+        # Do not include 'user' here; it will be passed to save().
+        ticket_data_for_serializer = {
             'ticket_number': ticket_number,
             'subject': request.data.get('subject', ''),
             'department': request.data.get('department', 'support'),
+            # 'status' will use the model's default if not specified by the serializer or model
         }
 
-        ticket_serializer = TicketSerializer(data=ticket_data)
+        ticket_serializer = TicketSerializer(data=ticket_data_for_serializer)
         if ticket_serializer.is_valid():
-            ticket = ticket_serializer.save()
+            # Pass the user instance directly to the save method.
+            # This ensures the 'user' field of the Ticket model is populated.
+            ticket = ticket_serializer.save(user=request.user)
 
             # Create initial message if provided
             initial_message = request.data.get('message', '')
@@ -124,11 +127,11 @@ class TicketCreateView(APIView):
 
                 # Process attachments if any
                 files = request.FILES.getlist('attachments')
-                for file in files:
+                for file_obj in files:  # Renamed 'file' to 'file_obj' for clarity
                     TicketMessageAttachment.objects.create(
                         message=message,
-                        file=file,
-                        content_type=file.content_type
+                        file=file_obj,
+                        content_type=file_obj.content_type
                     )
 
             # Return created ticket with details
