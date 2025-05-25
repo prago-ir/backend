@@ -23,8 +23,7 @@ urlpatterns = [
     path('statistics/total-users/',
          views.TotalUsersCountView.as_view(), name='total_users_count'),
     path('profile/update/', views.UserProfileUpdateView.as_view(),
-         name='profile_update'),  # New URL
-
+         name='profile_update'),
     #     path('reset-password/', views.ResetPasswordView.as_view(), name='change_password'),
     #     path('login-via-password/', views.LoginViaPassword.as_view(), name='login_via_password'),
 ]

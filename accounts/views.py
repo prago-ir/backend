@@ -9,6 +9,8 @@ from rest_framework import status
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.exceptions import ValidationError
 from rest_framework_simplejwt.tokens import RefreshToken
+from django.utils import timezone
+from datetime import timedelta
 
 from .models import OTP, MyUser, Profile
 # Add UserProfileSerializer
@@ -444,13 +446,51 @@ class CheckIdentifierExistsView(APIView):
 
 
 class TotalUsersCountView(APIView):
-    # Or IsAuthenticated if you want only logged-in users to see this
+    # Or AllowAny if you want anyone to see this
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
         User = get_user_model()
-        total_users = User.objects.count()
-        return Response({"total_users": total_users}, status=status.HTTP_200_OK)
+        now = timezone.now()
+        three_days_ago = now - timedelta(days=3)
+
+        current_total_users = User.objects.count()
+
+        # Count users that were created up to 3 days ago
+        # This represents the user count as of 3 days ago.
+        # We use date_joined as it's standard for user creation timestamp.
+        # If your MyUser model uses a different field like 'created_at' for this, adjust accordingly.
+        users_3_days_ago_count = User.objects.filter(
+            date_joined__lt=three_days_ago).count()
+
+        percentage_change = 0
+        # Can be True (growth), False (shrinkage), or None (no change or not applicable)
+        is_growth = None
+
+        if users_3_days_ago_count > 0:
+            change = current_total_users - users_3_days_ago_count
+            percentage_change = round(
+                (change / users_3_days_ago_count) * 100, 2)
+            if change > 0:
+                is_growth = True
+            elif change < 0:
+                is_growth = False
+            else:
+                is_growth = None  # No change
+        elif current_total_users > 0 and users_3_days_ago_count == 0:
+            # If there were 0 users 3 days ago and now there are some,
+            # it's effectively 100% growth from a base of 0, or simply "New".
+            # For simplicity, let's call it 100% growth if new users appeared.
+            percentage_change = 100.00
+            is_growth = True
+        # If current_total_users is 0 and users_3_days_ago_count was 0, percentage_change remains 0, is_growth is None.
+
+        return Response({
+            "total_users": current_total_users,
+            "percentage_change_since_3_days": percentage_change,
+            # True for growth, False for shrinkage, None for no change/N.A.
+            "is_growth": is_growth
+        }, status=status.HTTP_200_OK)
 
 
 class UserProfileUpdateView(APIView):
