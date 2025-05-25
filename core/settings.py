@@ -76,12 +76,15 @@ MIDDLEWARE = [
 ]
 
 CORS_ALLOWED_ORIGINS = [
+    # For accessing frontend via Nginx (dev and current prod config)
     'http://localhost',
-    'http://frontend',
-    'http://api.localhost',
-    'http://127.0.0.1:3000',
-    'http://localhost:3000'
+    'http://localhost:3000',    # For direct access to Next.js dev server
+    'http://127.0.0.1:3000',  # For direct access to Next.js dev server via 127.0.0.1
 ]
+
+# If you deploy to actual domains, you'll need to add them here, e.g.:
+# 'https://www.yourdomain.com',
+# 'https://yourfrontenddomain.com',
 
 
 CORS_ALLOW_CREDENTIALS = True
