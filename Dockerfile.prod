@@ -27,8 +27,12 @@ RUN chmod +x /app/entrypoint.sh
 RUN mkdir -p /app/assets_served /app/media && \
     chmod -R 755 /app/assets_served /app/media
 
+# Migrations and collectstatic will be handled by entrypoint.sh
+# RUN python manage.py migrate --noinput
+# RUN python manage.py collectstatic --noinput
 
-    RUN python manage.py collectstatic --noinput
+# Set the entrypoint script
+ENTRYPOINT ["/app/entrypoint.sh"]
 
-# Start Gunicorn
+# Start Gunicorn (this will be passed as arguments to the entrypoint)
 CMD ["gunicorn", "--bind", "0.0.0.0:8000", "core.wsgi:application"]

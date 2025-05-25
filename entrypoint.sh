@@ -1,64 +1,24 @@
-#!/bin/bash
+#!/bin/sh
 set -e
 
 echo "Starting entrypoint script..."
 
-# Wait for database to be ready
+# The docker-compose.prod.yml ensures MariaDB is healthy before starting this container.
+# If an additional explicit wait is needed, a loop checking DB connectivity can be added here.
+# Example (requires mysql-client in the container, or use the Python script previously in comments):
 # echo "Waiting for database to be ready..."
-# python << END
-# import sys
-# import time
-# import MySQLdb
+# until mysqladmin ping -h"${DB_HOST}" -u"${DB_USER}" -p"${DB_PASSWORD}" --silent; do
+#     echo "Database not ready yet, waiting..."
+#     sleep 2
+# done
+# echo "Database is ready!"
 
-# for i in range(30):
-#     try:
-#         MySQLdb.connect(
-#             host="${DB_HOST}",
-#             user="${DB_USER}",
-#             passwd="${DB_PASSWORD}",
-#             db="${DB_NAME}"
-#         )
-#         print("Database is ready!")
-#         break
-#     except MySQLdb.OperationalError:
-#         print("Database not ready yet, waiting...")
-#         time.sleep(1)
-# else:
-#     print("Could not connect to database after 30 attempts")
-#     sys.exit(1)
-# END
+echo "Running database migrations..."
+python manage.py migrate --noinput
 
-# Apply core migrations first
-#echo "Running contenttypes migrations..."
-#python manage.py migrate contenttypes
-#
-#echo "Running auth migrations..."
-#python manage.py migrate auth
-#
-#echo "Running admin migrations..."
-#python manage.py migrate admin
-#
-#echo "Running sessions migrations..."
-#python manage.py migrate sessions
-#
-## Apply migrations
-#echo "Running the rest of migrations..."
-#python manage.py migrate
-
-# Collect static files
 echo "Collecting static files..."
 python manage.py collectstatic --noinput --clear
 
 echo "Application initialization complete."
-echo "Starting application..."
-exec "$@"
-
-# Collect static files
-echo "Collecting static files..."
-python manage.py collectstatic --noinput --clear
-
-set -e  # Return to exit on error
-
-echo "Application initialization complete."
-echo "Starting application..."
+echo "Starting application with command: $@"
 exec "$@"
