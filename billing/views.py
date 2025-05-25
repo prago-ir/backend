@@ -1,7 +1,6 @@
-from django.shortcuts import render, get_object_or_404, redirect
+from django.shortcuts import get_object_or_404, redirect
 from django.conf import settings
 from django.urls import reverse
-from django.http import Http404, HttpResponse
 from django.utils import timezone
 from django.db import transaction
 
@@ -10,8 +9,10 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 
-from .models import Order  # Make sure Order is imported
+from .models import Order, Transaction
 from .serializers import UserOrderListSerializer  # Import the new serializer
+
+from subscriptions.models import SubscriptionPlan
 
 import uuid
 import json
