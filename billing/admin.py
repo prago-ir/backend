@@ -4,12 +4,6 @@ from django.contrib.contenttypes.models import ContentType
 from courses.models import Course
 from subscriptions.models import SubscriptionPlan
 
-# Get valid content types for items
-VALID_CONTENT_TYPES = [
-    ContentType.objects.get_for_model(Course),
-    ContentType.objects.get_for_model(SubscriptionPlan)
-]
-
 
 @admin.register(Coupon)
 class CouponAdmin(admin.ModelAdmin):
@@ -106,6 +100,7 @@ class OrderItemAdmin(admin.ModelAdmin):
     def formfield_for_foreignkey(self, db_field, request, **kwargs):
         if db_field.name == 'content_type':
             kwargs['queryset'] = ContentType.objects.filter(
-                model__in=['course', 'subscriptionplan']
+                models.Q(app_label='courses', model='course') |
+                models.Q(app_label='subscriptions', model='subscriptionplan')
             )
         return super().formfield_for_foreignkey(db_field, request, **kwargs)
