@@ -19,4 +19,6 @@ urlpatterns = [
     #     path('orders/', views.OrderListView.as_view(), name='order_list'),
     #     path('orders/<str:order_number>/',
     #          views.OrderDetailView.as_view(), name='order_detail'),
+
+    path('my-orders/', views.UserOrderListView.as_view(), name='user_order_list'),
 ]

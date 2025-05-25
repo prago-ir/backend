@@ -4,18 +4,14 @@ from django.urls import reverse
 from django.http import Http404, HttpResponse
 from django.utils import timezone
 from django.db import transaction
-from django.contrib.auth.decorators import login_required
-from django.contrib.contenttypes.models import ContentType
 
-from rest_framework import generics, permissions, status
 from rest_framework.views import APIView
 from rest_framework.response import Response
+from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
-from rest_framework.decorators import api_view, permission_classes
 
-from courses.models import Course
-from subscriptions.models import SubscriptionPlan
-from .models import Order, OrderItem, Transaction, Coupon
+from .models import Order  # Make sure Order is imported
+from .serializers import UserOrderListSerializer  # Import the new serializer
 
 import uuid
 import json
@@ -447,3 +443,17 @@ class SubscriptionPurchaseView(APIView):
         except Exception as e:
             logger.exception("Error in subscription purchase")
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class UserOrderListView(APIView):
+    """
+    View for listing orders for the current authenticated user.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+        orders = Order.objects.filter(user=user).order_by('-created_at')
+        serializer = UserOrderListSerializer(
+            orders, many=True, context={'request': request})
+        return Response(serializer.data)
