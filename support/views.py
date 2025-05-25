@@ -164,3 +164,22 @@ class TicketCreateView(APIView):
             return Response(detail_serializer.data, status=status.HTTP_201_CREATED)
 
         return Response(ticket_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class UserActiveTicketsCountView(APIView):
+    """
+    View for retrieving the count of active tickets for the current user.
+    Active tickets are those with status 'open', 'in_progress', or 'answered'.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+        active_statuses = ['open', 'in_progress', 'answered']
+
+        active_tickets_count = Ticket.objects.filter(
+            user=user,
+            status__in=active_statuses
+        ).count()
+
+        return Response({"active_tickets_count": active_tickets_count}, status=status.HTTP_200_OK)
