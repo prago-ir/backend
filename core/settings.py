@@ -80,6 +80,7 @@ CORS_ALLOWED_ORIGINS = [
     'http://localhost',
     'http://localhost:3000',    # For direct access to Next.js dev server
     'http://127.0.0.1:3000',  # For direct access to Next.js dev server via 127.0.0.1
+    'https://prago.ir'
 ]
 
 # If you deploy to actual domains, you'll need to add them here, e.g.:
