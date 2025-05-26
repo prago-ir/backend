@@ -1,5 +1,4 @@
 from rest_framework import serializers
-
 from accounts.serializers import OrganizerSerializer, TeacherSerializer
 from taxonomy.serializers import CategorySerializer, TagSerializer
 from .models import Course, Episode, Chapter, Attribute, RoadMap
@@ -175,3 +174,16 @@ class RoadMapSerializer(serializers.ModelSerializer):
                 status='published'
             ).count()
         return count
+
+
+class CourseLiteSerializer(serializers.ModelSerializer):
+    cover_image_url = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Course
+        fields = ['id', 'title', 'slug', 'cover_image_url']
+
+    def get_cover_image_url(self, obj):
+        if obj.cover_image:
+            return obj.cover_image.url
+        return None

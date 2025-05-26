@@ -1,5 +1,6 @@
 from rest_framework import serializers
 from .models import SubscriptionPlan
+from courses.serializers import CourseLiteSerializer # Import from courses app
 from decimal import Decimal
 import logging
 
@@ -11,6 +12,8 @@ class SubscriptionPlanSerializer(serializers.ModelSerializer):
     current_price = serializers.CharField(read_only=True)
     original_price = serializers.CharField(read_only=True)
     has_special_offer = serializers.SerializerMethodField()
+    
+    included_courses = CourseLiteSerializer(many=True, read_only=True)
 
     class Meta:
         model = SubscriptionPlan
@@ -21,6 +24,7 @@ class SubscriptionPlanSerializer(serializers.ModelSerializer):
             'has_special_offer',
             'duration_days',
             'is_active',
+            'included_courses',
         ]
 
     # This method is now a helper for to_representation, not tied to a SerializerMethodField

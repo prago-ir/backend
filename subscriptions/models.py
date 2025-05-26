@@ -49,12 +49,21 @@ class SubscriptionPlan(models.Model):
 
     def has_active_special_offer(self) -> bool:
         now = timezone.now()
-        return bool(
-            self.special_offer_price is not None and
-            self.special_offer_start_date and
-            self.special_offer_end_date and
-            self.special_offer_start_date <= now <= self.special_offer_end_date
-        )
+        
+        # Check if essential special offer details are present
+        if self.special_offer_price is None or not self.special_offer_start_date:
+            return False
+
+        # Check if the offer has started
+        if self.special_offer_start_date > now:
+            return False
+
+        # Check if the offer has an end date and if it has passed
+        if self.special_offer_end_date is not None and self.special_offer_end_date < now:
+            return False
+            
+        # If all checks pass (or end date is None and offer has started), the offer is active
+        return True
 
     def get_current_price(self) -> Decimal:
         """
