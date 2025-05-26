@@ -65,41 +65,16 @@ class RequestOTPView(APIView):
         otp = totp.now()  # Generate a time-based OTP
 
         # Send OTP asynchronously using Celery
-        # if email:
-        #     try:
-        #         from django.core.mail import send_mail
-        #         from django.conf import settings
-
-        #         subject = "کد تایید پراگو"
-        #         message = f"کد تایید ورود: {otp}"
-        #         html_message = f"""
-        #         <div style="font-family: Vazirmatn, 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eee; border-radius: 5px;" dir="rtl">
-        #             <h2 style="color: #333;">کد تایید پراگو</h2>
-        #             <p>از این کد جهت احراز هویت خود استفاده کنید: {otp}</p>
-        #         </div>
-        #         """
-        #         # Log all email settings for debugging
-        #         print(f"Email settings: HOST={settings.EMAIL_HOST}, PORT={settings.EMAIL_PORT}, USER={settings.EMAIL_HOST_USER}")
-
-        #         # Send immediately for debugging
-        #         result = send_mail(
-        #             subject=subject,
-        #             message=message,
-        #             from_email=settings.DEFAULT_FROM_EMAIL,
-        #             recipient_list=[email],
-        #             html_message=html_message,
-        #             fail_silently=False
-        #         )
-        #         print(f"Direct email send result: {result}")
-
-        #         # Also try the async version
-        #         send_otp_email.delay(email, otp)
-        #     except Exception as e:
-        #         print(f"Email send error: {str(e)}")
-        #         # Still try the async version
-        #         send_otp_email.delay(email, otp)
-        # elif phone:
-        #     send_otp_sms.delay(phone, otp)
+        if email:
+            try:
+                send_otp_email.delay(email, otp)
+            except Exception as e:
+                print(f"Email send error: {str(e)}")
+        elif phone:
+            try:
+                send_otp_sms.delay(phone, otp)
+            except Exception as e:
+                print(f"SMS send error: {str(e)}")
         print(f"otp for {identifier} is {otp}")
 
         return Response({"message": "OTP sent successfully", "otp": otp}, status=status.HTTP_200_OK)
