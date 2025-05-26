@@ -270,25 +270,25 @@ LOGGING = {
             'class': 'logging.StreamHandler',
             'formatter': 'verbose',
         },
-        'file': {
-            'level': 'DEBUG',
-            'class': 'logging.FileHandler',
-            'filename': os.path.join(BASE_DIR, 'debug.log'),
-            'formatter': 'verbose',
-        },
+        # 'file': {
+        #     'level': 'DEBUG',
+        #     'class': 'logging.FileHandler',
+        #     'filename': os.path.join(BASE_DIR, 'debug.log'),
+        #     'formatter': 'verbose',
+        # },
     },
     'loggers': {
         '': {  # Root logger
-            'handlers': ['console', 'file'],
+            'handlers': ['console'],  # Removed 'file'
             'level': 'INFO',
         },
         'accounts': {  # Your app logger
-            'handlers': ['console', 'file'],
+            'handlers': ['console'],  # Removed 'file'
             'level': 'DEBUG',
             'propagate': False,
         },
         'celery': {
-            'handlers': ['console', 'file'],
+            'handlers': ['console'],  # Removed 'file'
             'level': 'INFO',
         },
     },
