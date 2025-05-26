@@ -145,35 +145,6 @@ DATABASES = {
     }
 }
 
-# Add database connection retries
-if os.environ.get('DB_ENGINE') == 'django.db.backends.mysql':
-    # Only add this for non-development environments
-    if 'mysql' in os.environ.get('DB_HOST', ''):
-        logger = logging.getLogger('django')
-
-        # Get database connection
-        import django.db.backends.mysql.base
-        original_connect = django.db.backends.mysql.base.DatabaseWrapper.get_new_connection
-
-        def get_new_connection_with_retry(self, conn_params):
-            retries = 10
-            delay = 3
-            for attempt in range(retries):
-                try:
-                    return original_connect(self, conn_params)
-                except Exception as e:
-                    if attempt < retries - 1:
-                        logger.warning(
-                            f"Database connection attempt {attempt+1}/{retries} failed. Retrying in {delay} seconds... Error: {str(e)}")
-                        time.sleep(delay)
-                        delay *= 1.5  # Exponential backoff
-                    else:
-                        logger.error(
-                            f"Failed to connect to database after {retries} attempts: {str(e)}")
-                        raise
-
-        django.db.backends.mysql.base.DatabaseWrapper.get_new_connection = get_new_connection_with_retry
-
 # Password validation
 # https://docs.djangoproject.com/en/4.2/ref/settings/#auth-password-validators
 
@@ -254,11 +225,11 @@ SIMPLE_JWT = {
 CELERY_TIMEZONE = "Asia/Tehran"
 REDIS_HOST = os.environ.get('REDIS_HOST', '127.0.0.1')
 REDIS_PORT = os.environ.get('REDIS_PORT', '6379')
+REDIS_PASSWORD = os.environ.get('REDIS_PASSWORD', 'your_redis_password')
 CELERY_BROKER_URL = os.environ.get(
-    'CELERY_BROKER_URL', f'redis://{REDIS_HOST}:{REDIS_PORT}')
-# print(CELERY_BROKER_URL)
+    'CELERY_BROKER_URL', f'redis://{REDIS_PASSWORD}@{REDIS_HOST}:{REDIS_PORT}')
 # Use Redis for result backend too
-CELERY_RESULT_BACKEND = f'redis://{REDIS_HOST}:{REDIS_PORT}/0'
+CELERY_RESULT_BACKEND = f'redis://{REDIS_PASSWORD}@{REDIS_HOST}:{REDIS_PORT}/0'
 CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
