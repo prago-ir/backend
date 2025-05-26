@@ -21,4 +21,8 @@ urlpatterns = [
     #          views.OrderDetailView.as_view(), name='order_detail'),
 
     path('my-orders/', views.UserOrderListView.as_view(), name='user_order_list'),
+
+    # Coupon validation endpoint
+    path('coupon/validate/', views.ValidateCouponView.as_view(),
+         name='validate_coupon'),
 ]

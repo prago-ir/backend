@@ -7,9 +7,9 @@ from django.db import transaction
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
 
-from .models import Order, Transaction
+from .models import Order, Transaction, Coupon  # Add Coupon
 from .serializers import UserOrderListSerializer  # Import the new serializer
 
 from subscriptions.models import SubscriptionPlan
@@ -331,32 +331,28 @@ class ZarinpalVerifyView(APIView):
 
 class SubscriptionPurchaseView(APIView):
     """
-    View for directly purchasing a subscription plan
+    View for directly purchasing a subscription plan, potentially with a coupon.
     """
     permission_classes = [IsAuthenticated]
 
     def post(self, request, *args, **kwargs):
-        # Extract data from request
         plan_id = request.data.get('plan_id')
         frontend_callback_url = request.data.get('callback_url')
+        coupon_code = request.data.get('coupon_code')  # New: Get coupon code
 
         if not plan_id:
             return Response({"error": "Subscription plan ID is required"}, status=status.HTTP_400_BAD_REQUEST)
-
         if not frontend_callback_url:
             return Response({"error": "Frontend callback URL is required"}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
-            # Get the subscription plan
             subscription_plan = get_object_or_404(
                 SubscriptionPlan, id=plan_id, is_active=True)
             user = request.user
-
-            # Log information for debugging
             logger.info(
-                f"Processing subscription purchase for user {user.id} ({user.email}), plan: {plan_id}")
+                f"Processing subscription purchase for user {user.id}, plan: {plan_id}, coupon: {coupon_code}")
 
-            # Check if user already has an active subscription to this plan
+            # Check for existing active subscription (your existing logic)
             from subscriptions.models import UserSubscription
             existing_subscription = UserSubscription.objects.filter(
                 user=user,
@@ -364,15 +360,39 @@ class SubscriptionPurchaseView(APIView):
                 is_active=True,
                 end_date__gt=timezone.now()
             ).first()
-
             if existing_subscription:
-                return Response(
-                    {"error": "You already have an active subscription to this plan"},
-                    status=status.HTTP_400_BAD_REQUEST
-                )
+                return Response({"error": "You already have an active subscription to this plan"}, status=status.HTTP_400_BAD_REQUEST)
 
-            # Create order
             order_number = f"ORD-{uuid.uuid4().hex[:8].upper()}"
+
+            current_plan_price = subscription_plan.get_current_price()
+            discount_amount = Decimal(0)
+            applied_coupon = None
+
+            if coupon_code:
+                try:
+                    coupon = Coupon.objects.get(
+                        code__iexact=coupon_code, is_active=True)
+                    if coupon.is_valid:  # Use the @property
+                        # Calculate discount based on the current plan price
+                        original_amount_for_discount = current_plan_price
+                        actual_discount = original_amount_for_discount - \
+                            coupon.apply_discount(original_amount_for_discount)
+                        discount_amount = actual_discount
+                        applied_coupon = coupon
+                        logger.info(
+                            f"Coupon '{coupon_code}' applied. Discount: {discount_amount}")
+                    else:
+                        logger.warning(
+                            f"Coupon '{coupon_code}' is invalid or expired.")
+                        # Optionally, return an error if coupon is invalid, or just ignore it
+                        # return Response({"error": "کد تخفیف نامعتبر یا منقضی شده است."}, status=status.HTTP_400_BAD_REQUEST)
+                except Coupon.DoesNotExist:
+                    logger.warning(f"Coupon '{coupon_code}' not found.")
+                    # Optionally, return an error if coupon not found, or just ignore it
+                    # return Response({"error": "کد تخفیف یافت نشد."}, status=status.HTTP_400_BAD_REQUEST)
+
+            final_amount_after_discount = current_plan_price - discount_amount
 
             with transaction.atomic():
                 order = Order.objects.create(
@@ -380,14 +400,19 @@ class SubscriptionPurchaseView(APIView):
                     order_number=order_number,
                     order_type='subscription',
                     subscription_plan=subscription_plan,
-                    total_amount=subscription_plan.price,
-                    final_amount=subscription_plan.price,  # No discounts for now
+                    # Original price for this transaction (could be special offer)
+                    total_amount=current_plan_price,
+                    discount_amount=discount_amount,
+                    final_amount=final_amount_after_discount,
+                    coupon=applied_coupon,  # Link the coupon to the order
                     status='pending'
                 )
 
-                # Create a transaction for payment
+                if applied_coupon:
+                    applied_coupon.record_usage()  # Record coupon usage
+
                 transaction_id = f"TRX-{uuid.uuid4().hex[:12].upper()}"
-                txn = Transaction.objects.create(
+                Transaction.objects.create(
                     order=order,
                     transaction_id=transaction_id,
                     amount=order.final_amount,
@@ -396,54 +421,49 @@ class SubscriptionPurchaseView(APIView):
                     extra_data={'frontend_callback_url': frontend_callback_url}
                 )
 
-                # Prepare description
                 description = f"Purchase of subscription plan: {subscription_plan.name}"
+                if applied_coupon:
+                    description += f" (Coupon: {applied_coupon.code})"
 
-                # Request payment from ZarinPal
                 zarinpal_view = ZarinpalPaymentView()
+                # Pass the original request for context if needed by ZarinpalPaymentView
                 zarinpal_view.request = request
 
                 zarinpal_response = zarinpal_view.initiate_zarinpal_payment(
+                    # Ensure this is integer for Zarinpal
                     amount=int(order.final_amount),
                     description=description,
                     email=user.email,
-                    mobile=user.phone,
+                    mobile=user.phone,  # Make sure user.phone exists and is valid
                     order_id=order.order_number,
                     transaction_id=transaction_id
                 )
 
                 if 'errors' in zarinpal_response and zarinpal_response['errors']:
+                    # Log the detailed error from Zarinpal
+                    logger.error(
+                        f"Zarinpal payment initiation failed for order {order.order_number}. Errors: {zarinpal_response['errors']}")
+                    # Provide a more generic error to the user
                     raise Exception(
-                        f"Payment initiation failed: {zarinpal_response['errors']}")
+                        "Payment initiation failed with the payment gateway.")
 
-                # Get the authority
                 authority = zarinpal_response.get('data', {}).get('authority')
                 if not authority:
+                    logger.error(
+                        f"No authority received from Zarinpal for order {order.order_number}. Response: {zarinpal_response}")
                     raise Exception(
-                        "No authority token received from payment gateway")
+                        "Failed to get payment authority from Zarinpal.")
 
-                # Update transaction with payment details
-                txn.payment_gateway_reference = authority
-                txn.extra_data.update({
-                    'authority': authority,
-                })
-                txn.save()
-
-                # Generate payment URL
                 payment_url = get_zarinpal_payment_url(authority)
+                return Response({'payment_url': payment_url, 'order_id': order.order_number})
 
-                return Response({
-                    "message": "Subscription purchase initiated successfully",
-                    "order_id": order.id,
-                    "order_number": order.order_number,
-                    "transaction_id": txn.transaction_id,
-                    "payment_url": payment_url,
-                    "authority": authority
-                })
-
+        except SubscriptionPlan.DoesNotExist:
+            logger.error(f"Subscription plan with ID {plan_id} not found.")
+            return Response({"error": "Subscription plan not found."}, status=status.HTTP_404_NOT_FOUND)
         except Exception as e:
-            logger.exception("Error in subscription purchase")
-            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+            logger.error(
+                f"Error during subscription purchase for plan {plan_id}: {str(e)}")
+            return Response({"error": f"An error occurred: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 class UserOrderListView(APIView):
@@ -458,3 +478,46 @@ class UserOrderListView(APIView):
         serializer = UserOrderListSerializer(
             orders, many=True, context={'request': request})
         return Response(serializer.data)
+
+
+class ValidateCouponView(APIView):
+    """
+    Validates a coupon code and returns its discount details.
+    """
+    permission_classes = [AllowAny]  # Optional
+
+    def post(self, request, *args, **kwargs):
+        coupon_code = request.data.get('coupon_code')
+
+        if not coupon_code:
+            return Response({"valid": False, "error": "کد تخفیف ارائه نشده است."}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            # Using __iexact for case-insensitive matching
+            coupon = Coupon.objects.get(code__iexact=coupon_code.strip())
+
+            if not coupon.is_valid:  # This uses the @property in your Coupon model
+                logger.warn(
+                    f"Validation attempt for invalid/expired coupon: {coupon_code}")
+                return Response({"valid": False, "error": "کد تخفیف نامعتبر یا منقضی شده است."}, status=status.HTTP_400_BAD_REQUEST)
+
+            logger.info(f"Coupon '{coupon_code}' validated successfully.")
+            return Response({
+                "valid": True,
+                "message": "کد تخفیف معتبر است.",
+                "coupon": {
+                    "code": coupon.code,
+                    "discount_type": coupon.discount_type,
+                    # Ensure Decimal is serialized as string
+                    "discount_value": str(coupon.discount_value),
+                    "description": coupon.description or "",
+                }
+            }, status=status.HTTP_200_OK)
+
+        except Coupon.DoesNotExist:
+            logger.warn(
+                f"Validation attempt for non-existent coupon: {coupon_code}")
+            return Response({"valid": False, "error": "کد تخفیف یافت نشد."}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            logger.error(f"Error validating coupon {coupon_code}: {str(e)}")
+            return Response({"valid": False, "error": "خطا در اعتبارسنجی کد تخفیف."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

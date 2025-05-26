@@ -11,151 +11,100 @@ from rest_framework.permissions import IsAuthenticated
 from .models import SubscriptionPlan, UserSubscription
 from courses.models import Course
 from billing.models import Order, Transaction
+from .serializers import SubscriptionPlanSerializer  # Import your serializer
 import uuid
 import json
 import requests
-import logging  # Import logging
+import logging
 
-logger = logging.getLogger(__name__)  # Get a logger instance
+logger = logging.getLogger(__name__)
 
 
 class SubscriptionPlanListView(generics.ListAPIView):
     """
     View for listing available subscription plans
     """
+    queryset = SubscriptionPlan.objects.filter(is_active=True)  # Use queryset
+    serializer_class = SubscriptionPlanSerializer  # Use the serializer
     permission_classes = [permissions.AllowAny]
 
-    def get(self, request):
-        plans = SubscriptionPlan.objects.filter(is_active=True)
-
-        plan_list = []
-        for plan in plans:
-            # Get courses included in this plan
-            included_courses = []
-            for course in plan.included_courses.all():
-                course_data = {
-                    'id': course.id,
-                    'title': course.title,
-                    'image': course.thumbnail.url if hasattr(course, 'thumbnail') and course.thumbnail else None,
-                    'description': course.short_description if hasattr(course, 'short_description') else None
-                }
-                included_courses.append(course_data)
-
-            # Calculate savings compared to individual course prices
-            total_course_price = sum(
-                course.price for course in plan.included_courses.all())
-            savings = total_course_price - plan.price if total_course_price > plan.price else 0
-
-            plan_data = {
-                'id': plan.id,
-                'name': plan.name,
-                'slug': plan.slug,
-                'description': plan.description,
-                'price': float(plan.price),
-                'duration_days': plan.duration_days,
-                'included_courses_count': plan.included_courses.count(),
-                'included_courses': included_courses,
-                'savings': float(savings),
-                'savings_percentage': int((savings / total_course_price) * 100) if total_course_price > 0 else 0
-            }
-
-            plan_list.append(plan_data)
-
-        return Response(plan_list)
+    # Optional: Add logging here if you want to debug this view specifically
+    # def list(self, request, *args, **kwargs):
+    #     response = super().list(request, *args, **kwargs)
+    #     if hasattr(response, 'data') and response.data:
+    #         logger.info("---- SubscriptionPlanListView (Generic) Response Data ----")
+    #         if isinstance(response.data, list) and len(response.data) > 0:
+    #             first_item = response.data[0]
+    #             if isinstance(first_item, dict):
+    #                 cp = first_item.get('current_price')
+    #                 op = first_item.get('original_price')
+    #                 logger.info(f"GENERIC VIEW LOG - First item current_price: '{cp}', Type: {type(cp)}")
+    #                 logger.info(f"GENERIC VIEW LOG - First item original_price: '{op}', Type: {type(op)}")
+    #     return response
 
 
 class PragoPlusPlansView(APIView):
     """
-    View for listing only the three Prago Plus subscription plans:
-    1- prago-plus-monthly
-    2- prago-plus-3-month
-    3- prago-plus-6-month
+    View for listing only the three Prago Plus subscription plans.
+    This view will now use the SubscriptionPlanSerializer.
     """
-    permission_classes = [
-        permissions.AllowAny]  # This is essential to fix the 401 error
+    permission_classes = [permissions.AllowAny]
 
     def get(self, request):
-        # Get only the specific Prago Plus plans by slug
         prago_plans_slugs = ['prago-plus-monthly',
                              'prago-plus-3-month', 'prago-plus-6-month']
+
+        # Fetch plans in the desired order if possible, or sort later
+        # A more robust way to order if slugs don't guarantee order:
+        from django.db.models import Case, When
+        preserved_order = Case(*[When(slug=slug, then=pos)
+                               for pos, slug in enumerate(prago_plans_slugs)])
         plans = SubscriptionPlan.objects.filter(
-            slug__in=prago_plans_slugs, is_active=True)
+            slug__in=prago_plans_slugs, is_active=True
+        ).order_by(preserved_order)
 
-        plan_list = []
-        for plan in plans:
-            # Get courses included in this plan
-            included_courses = []
-            for course in plan.included_courses.all():
-                course_data = {
-                    'id': course.id,
-                    'title': course.title,
-                    'image': course.thumbnail.url if hasattr(course, 'thumbnail') and course.thumbnail else None,
-                    'description': course.short_description if hasattr(course, 'short_description') else None
-                }
-                included_courses.append(course_data)
+        # Use the serializer
+        serializer = SubscriptionPlanSerializer(
+            plans, many=True, context={'request': request})
+        serialized_data = serializer.data
 
-            plan_data = {
-                'id': plan.id,
-                'name': plan.name,
-                'slug': plan.slug,
-                'description': plan.description,
-                'price': float(plan.price),
-                'duration_days': plan.duration_days,
-                'included_courses_count': plan.included_courses.count(),
-            }
+        # Log the data produced by the serializer for this view
+        logger.info(
+            "---- PragoPlusPlansView Response Data (using serializer) ----")
+        if isinstance(serialized_data, list) and len(serialized_data) > 0:
+            first_item = serialized_data[0]
+            if isinstance(first_item, dict):
+                cp = first_item.get('current_price')
+                op = first_item.get('original_price')
+                logger.info(
+                    f"PRAGO PLUS VIEW LOG - First item current_price: '{cp}', Type: {type(cp)}")
+                logger.info(
+                    f"PRAGO PLUS VIEW LOG - First item original_price: '{op}', Type: {type(op)}")
+        logger.info("---- End PragoPlusPlansView Response Data ----")
 
-            plan_list.append(plan_data)
-
-        # Sort plans by duration (ascending) to show monthly first, then 3-month, then 6-month
-        plan_list.sort(key=lambda x: x['duration_days'])
-
-        return Response(plan_list)
+        return Response(serialized_data)
 
 
 class SubscriptionPlanDetailView(generics.RetrieveAPIView):
     """
     View for retrieving details of a specific subscription plan
     """
+    queryset = SubscriptionPlan.objects.filter(is_active=True)  # Use queryset
+    serializer_class = SubscriptionPlanSerializer  # Use the serializer
     permission_classes = [permissions.AllowAny]
+    lookup_field = 'slug'  # Ensure this matches your URL conf
 
-    def get(self, request, slug):
-        plan = get_object_or_404(SubscriptionPlan, slug=slug, is_active=True)
-
-        # Get detailed course information for this plan
-        included_courses = []
-        for course in plan.included_courses.all():
-            course_data = {
-                'id': course.id,
-                'title': course.title,
-                'slug': course.slug if hasattr(course, 'slug') else None,
-                'image': course.thumbnail.url if hasattr(course, 'thumbnail') and course.thumbnail else None,
-                'description': course.short_description if hasattr(course, 'short_description') else None,
-                'price': float(course.price),
-                'instructor': course.instructor.user.get_full_name() if hasattr(course, 'instructor') and course.instructor else None
-            }
-            included_courses.append(course_data)
-
-        # Calculate savings
-        total_course_price = sum(
-            course.price for course in plan.included_courses.all())
-        savings = total_course_price - plan.price if total_course_price > plan.price else 0
-
-        plan_data = {
-            'id': plan.id,
-            'name': plan.name,
-            'slug': plan.slug,
-            'description': plan.description,
-            'price': float(plan.price),
-            'duration_days': plan.duration_days,
-            'included_courses_count': plan.included_courses.count(),
-            'included_courses': included_courses,
-            'created_at': plan.created_at.isoformat(),
-            'total_course_value': float(total_course_price),
-            'savings': float(savings),
-            'savings_percentage': int((savings / total_course_price) * 100) if total_course_price > 0 else 0
-        }
-
-        return Response(plan_data)
+    # Optional: Add logging here if you want to debug this view specifically
+    # def retrieve(self, request, *args, **kwargs):
+    #     response = super().retrieve(request, *args, **kwargs)
+    #     if hasattr(response, 'data') and response.data:
+    #         logger.info(f"---- SubscriptionPlanDetailView ({kwargs.get('slug')}) Response Data ----")
+    #         if isinstance(response.data, dict):
+    #             cp = response.data.get('current_price')
+    #             op = response.data.get('original_price')
+    #             logger.info(f"DETAIL VIEW LOG - current_price: '{cp}', Type: {type(cp)}")
+    #             logger.info(f"DETAIL VIEW LOG - original_price: '{op}', Type: {type(op)}")
+    #     return response
 
 
 class UserSubscriptionListView(APIView):
