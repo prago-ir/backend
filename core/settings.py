@@ -225,11 +225,10 @@ SIMPLE_JWT = {
 CELERY_TIMEZONE = "Asia/Tehran"
 REDIS_HOST = os.environ.get('REDIS_HOST', '127.0.0.1')
 REDIS_PORT = os.environ.get('REDIS_PORT', '6379')
-REDIS_PASSWORD = os.environ.get('REDIS_PASSWORD', 'your_redis_password')
 CELERY_BROKER_URL = os.environ.get(
-    'CELERY_BROKER_URL', f'redis://{REDIS_PASSWORD}@{REDIS_HOST}:{REDIS_PORT}')
+    'CELERY_BROKER_URL', f'redis://{REDIS_HOST}:{REDIS_PORT}')
 # Use Redis for result backend too
-CELERY_RESULT_BACKEND = f'redis://{REDIS_PASSWORD}@{REDIS_HOST}:{REDIS_PORT}/0'
+CELERY_RESULT_BACKEND = f'redis://{REDIS_HOST}:{REDIS_PORT}/0'
 CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
