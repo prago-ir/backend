@@ -75,13 +75,8 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
-CORS_ALLOWED_ORIGINS = [
-    # For accessing frontend via Nginx (dev and current prod config)
-    'http://localhost',
-    'http://localhost:3000',    # For direct access to Next.js dev server
-    'http://127.0.0.1:3000',  # For direct access to Next.js dev server via 127.0.0.1
-    'https://prago.ir'
-]
+CORS_ALLOWED_ORIGINS = os.environ.get(
+    'CORS_ALLOWED_ORIGINS', 'localhost,127.0.0.1').split(',')
 
 # If you deploy to actual domains, you'll need to add them here, e.g.:
 # 'https://www.yourdomain.com',
