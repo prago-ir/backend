@@ -35,4 +35,4 @@ RUN mkdir -p /app/assets_served /app/media && \
 ENTRYPOINT ["/app/entrypoint.sh"]
 
 # Start Gunicorn (this will be passed as arguments to the entrypoint)
-CMD ["gunicorn", "--bind", "0.0.0.0:8000", "core.wsgi:application"]
+CMD ["gunicorn", "--bind", "0.0.0.0:8000", "core.wsgi:application", "--log-level", "debug"]
