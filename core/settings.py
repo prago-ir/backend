@@ -33,6 +33,9 @@ DEBUG = os.environ.get('DEBUG', True)
 ALLOWED_HOSTS = os.environ.get(
     'ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
 
+CSRF_TRUSTED_ORIGINS = os.environ.get(
+    'ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
+
 # Application definition
 
 INSTALLED_APPS = [
@@ -77,10 +80,6 @@ MIDDLEWARE = [
 
 CORS_ALLOWED_ORIGINS = os.environ.get(
     'CORS_ALLOWED_ORIGINS', 'localhost,127.0.0.1').split(',')
-
-# If you deploy to actual domains, you'll need to add them here, e.g.:
-# 'https://www.yourdomain.com',
-# 'https://yourfrontenddomain.com',
 
 
 CORS_ALLOW_CREDENTIALS = True
