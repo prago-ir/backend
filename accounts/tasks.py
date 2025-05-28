@@ -1,4 +1,5 @@
 import logging
+import os
 from celery import shared_task
 from django.core.mail import send_mail
 from django.conf import settings
@@ -11,6 +12,18 @@ logger = logging.getLogger(__name__)
 sms_api_key = SMS_API_KEY
 
 sms = SMSClient(sms_api_key)
+
+
+print(f"=== CELERY WORKER ENV DEBUG ===")
+print(f"EMAIL_HOST_USER env: {os.environ.get('EMAIL_HOST_USER', 'NOT_SET')}")
+print(
+    f"DEFAULT_FROM_EMAIL env: {os.environ.get('DEFAULT_FROM_EMAIL', 'NOT_SET')}")
+print(
+    f"Django EMAIL_HOST_USER: {getattr(settings, 'EMAIL_HOST_USER', 'NOT_SET')}")
+print(
+    f"Django DEFAULT_FROM_EMAIL: {getattr(settings, 'DEFAULT_FROM_EMAIL', 'NOT_SET')}")
+print(f"===============================")
+
 
 @shared_task
 def send_email_task(subject, message, recipient_list, html_message=None):
@@ -32,6 +45,7 @@ def send_email_task(subject, message, recipient_list, html_message=None):
         logger.error(f"Failed to send email to {recipient_list}: {str(e)}")
         raise e
 
+
 @shared_task
 def send_sms_task(phone_number, message):
     """
@@ -40,12 +54,13 @@ def send_sms_task(phone_number, message):
     """
     try:
         message = sms.send("+983000505", phone_number, message)
-       
+
         logger.info(f"SMS sent to {phone_number}: {message}")
         return True
     except Exception as e:
         logger.error(f"Failed to send SMS to {phone_number}: {str(e)}")
         raise e
+
 
 @shared_task
 def send_otp_email(email, otp):
@@ -69,14 +84,16 @@ def send_otp_email(email, otp):
     """
     return send_email_task(subject, message, [email], html_message)
 
+
 @shared_task
 def send_otp_sms(phone, otp):
     """
     Task to send OTP via SMS
     """
     try:
-        message = sms.send_pattern("4v3jrycm29newaf", "+983000505", phone, {"code": otp})
-       
+        message = sms.send_pattern(
+            "4v3jrycm29newaf", "+983000505", phone, {"code": otp})
+
         logger.info(f"SMS sent to {phone}: {message}")
         return True
     except Exception as e:
