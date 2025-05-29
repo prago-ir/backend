@@ -14,17 +14,6 @@ sms_api_key = SMS_API_KEY
 sms = SMSClient(sms_api_key)
 
 
-print(f"=== CELERY WORKER ENV DEBUG ===")
-print(f"EMAIL_HOST_USER env: {os.environ.get('EMAIL_HOST_USER', 'NOT_SET')}")
-print(
-    f"DEFAULT_FROM_EMAIL env: {os.environ.get('DEFAULT_FROM_EMAIL', 'NOT_SET')}")
-print(
-    f"Django EMAIL_HOST_USER: {getattr(settings, 'EMAIL_HOST_USER', 'NOT_SET')}")
-print(
-    f"Django DEFAULT_FROM_EMAIL: {getattr(settings, 'DEFAULT_FROM_EMAIL', 'NOT_SET')}")
-print(f"===============================")
-
-
 @shared_task
 def send_email_task(subject, message, recipient_list, html_message=None):
     """
