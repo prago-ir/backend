@@ -19,8 +19,11 @@ from .tasks import send_otp_email, send_otp_sms
 from .utils import save_profile_picture
 from rest_framework.parsers import MultiPartParser, FormParser  # For file uploads
 
+from django.utils.decorators import method_decorator
+from django.views.decorators.csrf import csrf_exempt
 
 # Add this new API view to your existing views.py file
+
 
 class UserInfoView(APIView):
     permission_classes = [IsAuthenticated]
@@ -324,6 +327,10 @@ class GoogleAuthView(APIView):
     Handle Google OAuth authentication data from frontend
     """
     permission_classes = [AllowAny]
+
+    @method_decorator(csrf_exempt)
+    def dispatch(self, *args, **kwargs):
+        return super().dispatch(*args, **kwargs)
 
     def post(self, request):
         data = request.data
