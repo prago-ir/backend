@@ -13,7 +13,7 @@ class SubscriptionPlan(models.Model):
     name = models.CharField(max_length=100, verbose_name='نام اشتراک')
     slug = models.SlugField(max_length=100, unique=True,
                             verbose_name='اسلاگ اشتراک')
-    description = models.TextField(verbose_name='توضیحات اشتراک')
+    description = models.TextField(blank=True, verbose_name='توضیحات اشتراک')
     price = models.DecimalField(
         max_digits=9, decimal_places=0, verbose_name='قیمت اصلی')  # This should not be None
     duration_days = models.PositiveIntegerField(verbose_name='مدت زمان (روز)')
@@ -49,7 +49,7 @@ class SubscriptionPlan(models.Model):
 
     def has_active_special_offer(self) -> bool:
         now = timezone.now()
-        
+
         # Check if essential special offer details are present
         if self.special_offer_price is None or not self.special_offer_start_date:
             return False
@@ -61,7 +61,7 @@ class SubscriptionPlan(models.Model):
         # Check if the offer has an end date and if it has passed
         if self.special_offer_end_date is not None and self.special_offer_end_date < now:
             return False
-            
+
         # If all checks pass (or end date is None and offer has started), the offer is active
         return True
 
