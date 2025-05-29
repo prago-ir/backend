@@ -36,6 +36,10 @@ ALLOWED_HOSTS = os.environ.get(
 CSRF_TRUSTED_ORIGINS = os.environ.get(
     'CSRF_TRUSTED_ORIGINS', 'http://localhost,http://127.0.0.1').split(',')
 
+if not DEBUG:
+    SESSION_COOKIE_DOMAIN = '.prago.ir'
+    CSRF_COOKIE_DOMAIN = '.prago.ir'
+
 # Application definition
 
 INSTALLED_APPS = [
