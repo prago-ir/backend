@@ -80,7 +80,7 @@ class Course(models.Model):
 
     intro_video_link = models.URLField(verbose_name='لینک ویدیو معرفی')
     total_hours = models.DecimalField(
-        max_digits=5, decimal_places=1, verbose_name='مجموع ساعات')
+        max_digits=5, decimal_places=1, default=0, verbose_name='مجموع ساعات')
 
     # Relationships
     organizers = models.ManyToManyField(
