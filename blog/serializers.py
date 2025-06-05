@@ -46,4 +46,4 @@ class PostDetailSerializer(serializers.ModelSerializer):
         ]
 
     def get_featured_image_url(self, obj):
-        return obj.get_featured_image_url()
+        return obj.featured_image.url

@@ -46,13 +46,13 @@ class PostAdmin(admin.ModelAdmin):
         updated_count = queryset.update(is_pinned=True)
         self.message_user(
             request, f"{updated_count} post(s) successfully pinned.", messages.SUCCESS)
-    pin_selected_posts.short_description = "Pin selected posts"
+    pin_selected_posts.short_description = "پین کردن پست‌های انتخابی"
 
     def unpin_selected_posts(self, request, queryset):
         updated_count = queryset.update(is_pinned=False)
         self.message_user(
             request, f"{updated_count} post(s) successfully unpinned.", messages.SUCCESS)
-    unpin_selected_posts.short_description = "Unpin selected posts"
+    unpin_selected_posts.short_description = "برداشتن پین از پست‌های انتخابی"
 
     actions = ['pin_selected_posts',
                'unpin_selected_posts']  # Add actions here

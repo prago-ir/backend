@@ -60,7 +60,8 @@ class AuthorSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Author
-        fields = ['id', 'user', 'avatar_url', 'biography', 'number_of_posts']
+        fields = ['id', 'full_name', 'avatar_url',
+                  'biography', 'number_of_posts']
 
     def get_avatar_url(self, obj):
         if obj.avatar:
