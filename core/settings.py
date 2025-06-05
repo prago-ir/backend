@@ -64,6 +64,7 @@ INSTALLED_APPS = [
 
     # My Apps
     'courses',
+    'blog',
     'taxonomy',
     'subscriptions',
     'enrollments',
