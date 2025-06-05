@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import MyUser, OTP, Organizer, Teacher, Profile  # Add Profile import
+from .models import MyUser, OTP, Organizer, Author, Teacher, Profile
 
 
 class MyUserSerializer(serializers.ModelSerializer):
@@ -48,6 +48,19 @@ class TeacherSerializer(serializers.ModelSerializer):
         model = Teacher
         fields = ['id', 'full_name', 'avatar_url',  # Changed avatar to avatar_url
                   'biography', 'number_of_courses']
+
+    def get_avatar_url(self, obj):
+        if obj.avatar:
+            return obj.avatar.url  # This will be the relative path starting with MEDIA_URL
+        return None
+
+
+class AuthorSerializer(serializers.ModelSerializer):
+    avatar_url = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Author
+        fields = ['id', 'user', 'avatar_url', 'biography', 'number_of_posts']
 
     def get_avatar_url(self, obj):
         if obj.avatar:
