@@ -24,7 +24,7 @@ class PostListSerializer(serializers.ModelSerializer):
         # Add 'status' if you want to show it in the list, useful for admin or previews
 
     def get_featured_image_url(self, obj):
-        return obj.get_featured_image_url()
+        return obj.featured_image.url
 
 
 class PostDetailSerializer(serializers.ModelSerializer):

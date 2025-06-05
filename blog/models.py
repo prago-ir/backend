@@ -20,21 +20,21 @@ class Post(models.Model):
         related_name='blog_posts',
         limit_choices_to={'content_type__in': ['blog', 'both']},
         verbose_name='دسته‌بندی‌ها',
-        blank=True  # Allow posts to have no categories initially
+        blank=True
     )
     tags = models.ManyToManyField(
         Tag,
         related_name='blog_posts',
         limit_choices_to={'content_type__in': ['blog', 'both']},
         verbose_name='تگ‌ها',
-        blank=True  # Allow posts to have no tags initially
+        blank=True
     )
 
     # Author
     author = models.ForeignKey(
         Author,
-        on_delete=models.SET_NULL,  # Or models.CASCADE if an author must exist
-        null=True,  # Allow null if author can be deleted or not set
+        on_delete=models.SET_NULL,
+        null=True,
         related_name='blog_posts',
         verbose_name='نویسنده'
     )
@@ -42,7 +42,6 @@ class Post(models.Model):
     # Engagement Metrics
     views_count = models.PositiveIntegerField(
         default=0, verbose_name='تعداد بازدید')
-    # Placeholder, actual liking mechanism needed
     likes_count = models.PositiveIntegerField(
         default=0, verbose_name='تعداد لایک‌ها')
     average_read_time = models.PositiveIntegerField(
@@ -65,10 +64,14 @@ class Post(models.Model):
     status = models.CharField(
         max_length=10, choices=STATUS_CHOICES, default='draft', verbose_name='وضعیت')
 
+    is_pinned = models.BooleanField(
+        default=False, verbose_name='پین شده')  # New field
+
     class Meta:
         verbose_name = 'نوشته'
         verbose_name_plural = 'نوشته‌ها'
-        ordering = ['-published_at']
+        # Pinned posts first, then by date
+        ordering = ['-is_pinned', '-published_at']
 
     def __str__(self):
         return self.title
@@ -76,4 +79,4 @@ class Post(models.Model):
     def get_featured_image_url(self):
         if self.featured_image and hasattr(self.featured_image, 'url'):
             return self.featured_image.url
-        return None  # Or a default placeholder image URL
+        return None

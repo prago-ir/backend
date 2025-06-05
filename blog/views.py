@@ -6,11 +6,9 @@ from rest_framework.response import Response
 from rest_framework import status, generics
 from rest_framework.permissions import AllowAny
 
-# Import Author if needed for filtering metadata
 from .models import Post, Category, Tag, Author
 from .serializers import PostListSerializer, PostDetailSerializer
 from taxonomy.serializers import CategorySerializer, TagSerializer  # For metadata
-# For metadata, if you filter by author
 # from accounts.serializers import AuthorLiteSerializer
 
 
@@ -18,15 +16,29 @@ class PostListView(APIView):
     permission_classes = [AllowAny]
 
     def get(self, request):
+        # --- Fetch Pinned Posts ---
+        pinned_posts_queryset = Post.objects.filter(
+            is_pinned=True,
+            status='published',
+            published_at__lte=timezone.now()
+            # Limit pinned posts, e.g., to 5
+        ).select_related('author__user').prefetch_related('categories', 'tags').order_by('-published_at')[:5]
+
+        pinned_posts_serializer = PostListSerializer(
+            pinned_posts_queryset, many=True, context={'request': request})
+        pinned_post_ids = [post.id for post in pinned_posts_queryset]
+        # --- End Fetch Pinned Posts ---
+
+        # --- Fetch Regular Posts (excluding pinned ones already fetched) ---
         queryset = Post.objects.filter(
             status='published',
             published_at__lte=timezone.now()
         ).select_related('author__user').prefetch_related('categories', 'tags')
+        # --- End Fetch Regular Posts ---
 
-        # Filtering
+        # Filtering (applies to the non-pinned posts)
         category_slug = request.query_params.get('category')
         tag_slug = request.query_params.get('tag')
-        # Assuming author ID for simplicity
         author_id = request.query_params.get('author')
 
         if category_slug:
@@ -36,25 +48,30 @@ class PostListView(APIView):
         if author_id:
             queryset = queryset.filter(author__id=author_id)
 
-        # Sorting
-        ordering = request.query_params.get(
-            'ordering', '-published_at')  # Default sort
-        if ordering in ['published_at', '-published_at', 'views_count', '-views_count']:
+        # Sorting (applies to the non-pinned posts)
+        ordering = request.query_params.get('ordering', '-published_at')
+        valid_ordering_fields = ['published_at',
+                                 '-published_at', 'views_count', '-views_count']
+        if ordering in valid_ordering_fields:
             queryset = queryset.order_by(ordering)
         else:
-            queryset = queryset.order_by(
-                '-published_at')  # Fallback to default
+            queryset = queryset.order_by('-published_at')
 
-        serializer = PostListSerializer(
+        # Pagination would typically apply to the 'queryset' of non-pinned posts
+        # For simplicity, if you implement pagination, apply it here before serializing 'queryset'
+
+        posts_serializer = PostListSerializer(
             queryset, many=True, context={'request': request})
 
-        published_post_ids = Post.objects.filter(
+        # Metadata for filters (consider if this should include data from pinned posts or only filterable posts)
+        # For now, metadata is based on all published posts for broader filter options.
+        all_published_post_ids = Post.objects.filter(
             status='published', published_at__lte=timezone.now()).values_list('id', flat=True)
 
         active_categories = Category.objects.filter(
-            blog_posts__id__in=published_post_ids).distinct()
+            blog_posts__id__in=all_published_post_ids).distinct()
         active_tags = Tag.objects.filter(
-            blog_posts__id__in=published_post_ids).distinct()
+            blog_posts__id__in=all_published_post_ids).distinct()
 
         metadata = {
             'categories': CategorySerializer(active_categories, many=True).data,
@@ -67,7 +84,8 @@ class PostListView(APIView):
         }
 
         return Response({
-            'posts': serializer.data,
+            'pinned_posts': pinned_posts_serializer.data,  # Add pinned posts here
+            'posts': posts_serializer.data,
             'metadata': metadata
         }, status=status.HTTP_200_OK)
 
@@ -85,48 +103,36 @@ class PostDetailView(APIView):
         except Post.DoesNotExist:
             return Response({"detail": "پست مورد نظر یافت نشد."}, status=status.HTTP_404_NOT_FOUND)
 
-        # Increment views_count
         post.views_count = F('views_count') + 1
         post.save(update_fields=['views_count'])
         post.refresh_from_db()
 
         serializer = PostDetailSerializer(post, context={'request': request})
 
-        # --- Related Posts Logic ---
         related_posts = []
         post_tags_ids = post.tags.values_list('id', flat=True)
         post_categories_ids = post.categories.values_list('id', flat=True)
 
         if post_tags_ids or post_categories_ids:
-            # Find posts sharing at least one tag or one category
-            # Prioritize posts with more shared tags/categories (more complex, for now simple union)
-
-            # Posts sharing tags
             shared_tags_posts = Post.objects.filter(
                 tags__in=post_tags_ids,
                 status='published',
                 published_at__lte=timezone.now()
             ).exclude(id=post.id).distinct()
 
-            # Posts sharing categories
             shared_categories_posts = Post.objects.filter(
                 categories__in=post_categories_ids,
                 status='published',
                 published_at__lte=timezone.now()
             ).exclude(id=post.id).distinct()
 
-            # Combine and get unique posts, then order and limit
-            # A more sophisticated approach might involve weighting or scoring relevance
             related_posts_queryset = (shared_tags_posts | shared_categories_posts).distinct(
-            ).order_by('-published_at')[:3]  # Get up to 3 related posts
-
+            ).order_by('-published_at')[:3]
             related_posts_serializer = PostListSerializer(
                 related_posts_queryset, many=True, context={'request': request})
             related_posts = related_posts_serializer.data
-        # --- End Related Posts Logic ---
 
         response_data = serializer.data
-        # Add related posts to the response
         response_data['related_posts'] = related_posts
 
         return Response(response_data, status=status.HTTP_200_OK)

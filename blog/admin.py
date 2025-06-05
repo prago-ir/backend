@@ -1,21 +1,23 @@
-from django.contrib import admin
-from .models import Post  # Import the Post model
+from django.contrib import admin, messages
+from .models import Post
 
 
 @admin.register(Post)
 class PostAdmin(admin.ModelAdmin):
-    list_display = ('title', 'slug', 'get_author_name',
-                    'get_status_display', 'published_at', 'created_at', 'updated_at')
-    list_filter = ('status', 'author', 'categories', 'tags', 'published_at')
+    list_display = ('title', 'slug', 'get_author_name', 'get_status_display',
+                    'is_pinned', 'published_at', 'created_at', 'updated_at')
+    list_filter = ('status', 'is_pinned', 'author', 'categories',
+                   'tags', 'published_at')
     search_fields = ('title', 'content', 'excerpt', 'slug',
-                     'author__username')  # Assuming author has a username
+                     # Updated search fields
+                     'author__user__username', 'author__user__first_name', 'author__user__last_name')
     prepopulated_fields = {'slug': ('title',)}
-    ordering = ('-published_at',)
+    ordering = ('-is_pinned', '-published_at',)
     filter_horizontal = ('categories', 'tags',)
 
     fieldsets = (
         (None, {
-            'fields': ('title', 'slug', 'author', 'status', 'published_at')
+            'fields': ('title', 'slug', 'author', 'status', 'is_pinned', 'published_at')
         }),
         ('Content', {
             'fields': ('content', 'excerpt', 'featured_image')
@@ -25,24 +27,35 @@ class PostAdmin(admin.ModelAdmin):
         }),
         ('Timestamps', {
             'fields': ('created_at', 'updated_at'),
-            'classes': ('collapse',)  # Make this section collapsible
+            'classes': ('collapse',)
         }),
     )
 
     readonly_fields = ('created_at', 'updated_at')
 
     def get_author_name(self, obj):
-        if obj.author:
-            # Assuming your Author model or User model has a 'get_full_name' method or a 'username' field
-            if hasattr(obj.author, 'get_full_name') and callable(obj.author.get_full_name):
-                return obj.author.get_full_name()
-            return obj.author.username  # Fallback to username
-        return None
-    get_author_name.short_description = 'Author'  # Column header in admin
+        if obj.author and obj.author.user:  # Check if author and user exist
+            if obj.author.user.get_full_name():
+                return obj.author.user.get_full_name()
+            return obj.author.user.username  # Fallback to username
+        return "N/A"  # Or some other placeholder
+    get_author_name.short_description = 'Author'
 
-    # If you have a 'status' field with choices, get_status_display is automatically available.
-    # If not, and 'status' is just a CharField, you can remove 'get_status_display'
-    # from list_display and just use 'status'.
+    # --- Admin Actions ---
+    def pin_selected_posts(self, request, queryset):
+        updated_count = queryset.update(is_pinned=True)
+        self.message_user(
+            request, f"{updated_count} post(s) successfully pinned.", messages.SUCCESS)
+    pin_selected_posts.short_description = "Pin selected posts"
+
+    def unpin_selected_posts(self, request, queryset):
+        updated_count = queryset.update(is_pinned=False)
+        self.message_user(
+            request, f"{updated_count} post(s) successfully unpinned.", messages.SUCCESS)
+    unpin_selected_posts.short_description = "Unpin selected posts"
+
+    actions = ['pin_selected_posts',
+               'unpin_selected_posts']  # Add actions here
 
 # If you prefer a simpler registration without customizations, you can just do:
 # admin.site.register(Post)

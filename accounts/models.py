@@ -217,7 +217,7 @@ class Author(models.Model):
         return f"{self.first_name} {self.last_name}"
 
     def __str__(self):
-        return f"Author: {self.user.full_name()}"
+        return f"Author: {self.full_name()}"
 
     def number_of_posts(self):
         return self.blog_posts.count()
