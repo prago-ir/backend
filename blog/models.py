@@ -1,3 +1,5 @@
+from django.dispatch import receiver
+from django.db.models.signals import post_save
 from django.db import models
 from django.contrib.auth import get_user_model
 from taxonomy.models import Category, Tag
@@ -80,3 +82,14 @@ class Post(models.Model):
         if self.featured_image and hasattr(self.featured_image, 'url'):
             return self.featured_image.url
         return None
+
+
+# post save to calculate average read time
+
+
+@receiver(post_save, sender=Post)
+def calculate_average_read_time(sender, instance, **kwargs):
+    # Simple heuristic: average read time is 5 seconds per 100 words
+    word_count = len(instance.content.split())
+    instance.average_read_time = max(1, word_count // 100 * 5)
+    instance.save(update_fields=['average_read_time'])

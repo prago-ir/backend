@@ -61,6 +61,7 @@ class Course(models.Model):
     slug = models.SlugField(max_length=100, unique=True,
                             verbose_name='اسلاگ دوره')
     description = models.TextField(verbose_name='توضیحات کامل دوره')
+    excerpt = models.TextField(blank=True, verbose_name='خلاصه')
     price = models.DecimalField(
         max_digits=9, decimal_places=0, verbose_name='قیمت')
 

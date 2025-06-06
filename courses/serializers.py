@@ -144,13 +144,19 @@ class RoadMapSerializer(serializers.ModelSerializer):
     courses = serializers.SerializerMethodField()
     total_hours = serializers.SerializerMethodField()
     total_videos = serializers.SerializerMethodField()
+    cover_image_url = serializers.SerializerMethodField()
 
     class Meta:
         model = RoadMap
         fields = [
-            'id', 'name', 'slug', 'description', 'cover_image',
+            'id', 'name', 'slug', 'description', 'cover_image_url',
             'status', 'published_at', 'courses', 'total_hours', 'total_videos'
         ]
+
+    def get_cover_image_url(self, obj):
+        if obj.cover_image:
+            return obj.cover_image.url
+        return None
 
     def get_courses(self, obj):
         # Only return published courses in the roadmap
