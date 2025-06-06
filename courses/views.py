@@ -58,6 +58,21 @@ class PopularCoursesView(APIView):
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
+class RoadmapDetailView(APIView):
+    """View to get roadmap details"""
+    permission_classes = [AllowAny]
+
+    def get(self, request, slug):
+        roadmap = get_object_or_404(
+            RoadMap,
+            slug=slug,
+            status='published',
+            published_at__lte=timezone.now()
+        )
+        serializer = RoadMapSerializer(roadmap, context={'request': request})
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
 class CourseListView(APIView):
     permission_classes = [AllowAny]  # Add this line to allow public access
 

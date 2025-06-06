@@ -89,7 +89,8 @@ class Post(models.Model):
 
 @receiver(post_save, sender=Post)
 def calculate_average_read_time(sender, instance, **kwargs):
-    # Simple heuristic: average read time is 5 seconds per 100 words
     word_count = len(instance.content.split())
-    instance.average_read_time = max(1, word_count // 100 * 5)
-    instance.save(update_fields=['average_read_time'])
+    new_average_read_time = max(1, round(word_count / 200.0))
+    if instance.average_read_time != new_average_read_time:
+        Post.objects.filter(pk=instance.pk).update(
+            average_read_time=new_average_read_time)

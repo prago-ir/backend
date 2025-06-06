@@ -81,10 +81,11 @@ class CourseSerializer(serializers.ModelSerializer):
     attributes = AttributeSerializer(many=True, read_only=True)
     current_price = serializers.SerializerMethodField()
     has_special_offer = serializers.SerializerMethodField()
+    cover_image_url = serializers.SerializerMethodField()
 
     class Meta:
         model = Course
-        fields = ['id', 'title', 'latin_title', 'slug', 'cover_image', 'description', 'price',
+        fields = ['id', 'title', 'latin_title', 'slug', 'cover_image_url', 'description', 'price',
                   'current_price', 'has_special_offer', 'special_offer_price',
                   'total_hours', 'published_at', 'teachers', 'organizers', 'categories', 'attributes', 'status']
 
@@ -93,6 +94,11 @@ class CourseSerializer(serializers.ModelSerializer):
 
     def get_has_special_offer(self, obj):
         return obj.has_active_special_offer()
+
+    def get_cover_image_url(self, obj):
+        if obj.cover_image:
+            return obj.cover_image.url
+        return None
 
 
 class CourseDetailSerializer(serializers.ModelSerializer):
@@ -145,12 +151,14 @@ class RoadMapSerializer(serializers.ModelSerializer):
     total_hours = serializers.SerializerMethodField()
     total_videos = serializers.SerializerMethodField()
     cover_image_url = serializers.SerializerMethodField()
+    courses_count = serializers.SerializerMethodField()  # New field
 
     class Meta:
         model = RoadMap
         fields = [
             'id', 'name', 'slug', 'description', 'cover_image_url',
-            'status', 'published_at', 'courses', 'total_hours', 'total_videos'
+            'status', 'published_at', 'courses', 'total_hours', 'total_videos',
+            'courses_count'  # Added new field
         ]
 
     def get_cover_image_url(self, obj):
@@ -180,6 +188,9 @@ class RoadMapSerializer(serializers.ModelSerializer):
                 status='published'
             ).count()
         return count
+
+    def get_courses_count(self, obj):  # New method
+        return obj.courses_count()
 
 
 class CourseLiteSerializer(serializers.ModelSerializer):
