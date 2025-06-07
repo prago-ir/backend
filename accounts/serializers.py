@@ -30,7 +30,7 @@ class OrganizerSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Organizer
-        fields = ['id', 'organization_name',
+        fields = ['id', 'organization_name', 'organization_slug',
                   # Changed organization_logo to organization_logo_url
                   'organization_logo_url', 'organization_description']
 
