@@ -79,20 +79,12 @@ class CourseSerializer(serializers.ModelSerializer):
     organizers = OrganizerSerializer(many=True, read_only=True)
     categories = CategorySerializer(many=True, read_only=True)
     attributes = AttributeSerializer(many=True, read_only=True)
-    current_price = serializers.SerializerMethodField()
-    has_special_offer = serializers.SerializerMethodField()
     cover_image_url = serializers.SerializerMethodField()
 
     class Meta:
         model = Course
         fields = ['id', 'title', 'latin_title', 'slug', 'cover_image_url', 'description', 'excerpt',
                   'total_hours', 'published_at', 'teachers', 'organizers', 'categories', 'attributes', 'status']
-
-    def get_current_price(self, obj):
-        return obj.get_current_price()
-
-    def get_has_special_offer(self, obj):
-        return obj.has_active_special_offer()
 
     def get_cover_image_url(self, obj):
         if obj.cover_image:
@@ -108,8 +100,6 @@ class CourseDetailSerializer(serializers.ModelSerializer):
     attributes = AttributeSerializer(many=True, read_only=True)
     chapters = ChapterSerializer(many=True, read_only=True)
     cover_image_url = serializers.SerializerMethodField()
-    current_price = serializers.SerializerMethodField()
-    has_special_offer = serializers.SerializerMethodField()
     is_enrolled = serializers.SerializerMethodField()
     is_accessible_via_subscription = serializers.SerializerMethodField()  # New field
 
@@ -124,12 +114,6 @@ class CourseDetailSerializer(serializers.ModelSerializer):
         if obj.cover_image:
             return obj.cover_image.url
         return None
-
-    def get_current_price(self, obj):
-        return obj.get_current_price()
-
-    def get_has_special_offer(self, obj):
-        return obj.has_active_special_offer()
 
     def get_is_enrolled(self, obj):
         # Check if context contains enrollment info
