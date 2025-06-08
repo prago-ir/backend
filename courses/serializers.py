@@ -85,8 +85,7 @@ class CourseSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Course
-        fields = ['id', 'title', 'latin_title', 'slug', 'cover_image_url', 'description', 'price',
-                  'current_price', 'has_special_offer', 'special_offer_price',
+        fields = ['id', 'title', 'latin_title', 'slug', 'cover_image_url', 'description', 'excerpt',
                   'total_hours', 'published_at', 'teachers', 'organizers', 'categories', 'attributes', 'status']
 
     def get_current_price(self, obj):
@@ -116,9 +115,7 @@ class CourseDetailSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Course
-        fields = ['id', 'title', 'latin_title', 'slug', 'cover_image_url', 'description',
-                  'price', 'current_price', 'has_special_offer', 'special_offer_price',
-                  'special_offer_start_date', 'special_offer_end_date', 'intro_video_link',
+        fields = ['id', 'title', 'latin_title', 'slug', 'cover_image_url', 'description', 'excerpt', 'intro_video_link',
                   'total_hours', 'published_at', 'teachers', 'organizers',
                   'categories', 'tags', 'attributes', 'chapters', 'status',
                   'is_enrolled', 'is_accessible_via_subscription']  # Added new field

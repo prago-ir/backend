@@ -40,7 +40,7 @@ class CourseAdmin(admin.ModelAdmin):
                          'attributes', 'tags', 'categories']
     fieldsets = [
         ('Course Information', {'fields': [
-         'cover_image', 'title', 'latin_title', 'slug', 'description', 'intro_video_link', 'total_hours']}),
+         'cover_image', 'title', 'latin_title', 'slug', 'description', 'excerpt', 'intro_video_link', 'total_hours']}),
         ('Publication', {'fields': ['status', 'published_at']}),
         ('Pricing', {'fields': ['price', 'special_offer_price',
          'special_offer_start_date', 'special_offer_end_date']}),
