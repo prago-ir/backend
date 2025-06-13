@@ -1,7 +1,8 @@
 from rest_framework import status
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated, AllowAny  # Import AllowAny
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.views import APIView
+from rest_framework.pagination import PageNumberPagination  # Add this import
 from django.shortcuts import get_object_or_404
 from django.db.models import Count, Q, Case, When, Value, IntegerField
 from django.utils import timezone
@@ -11,7 +12,13 @@ from .serializers import CourseSerializer, CourseDetailSerializer, EpisodeSerial
 from enrollments.models import Enrollment, UserProgress
 from taxonomy.serializers import CategorySerializer
 from accounts.serializers import OrganizerSerializer
-from subscriptions.models import UserSubscription  # Add this import
+from subscriptions.models import UserSubscription
+
+
+class StandardResultsSetPagination(PageNumberPagination):
+    page_size = 8
+    page_size_query_param = 'page_size'
+    max_page_size = 50
 
 
 class LatestRoadmapView(APIView):
@@ -74,55 +81,117 @@ class RoadmapDetailView(APIView):
 
 
 class CourseListView(APIView):
-    permission_classes = [AllowAny]  # Add this line to allow public access
+    permission_classes = [AllowAny]
+    pagination_class = StandardResultsSetPagination
 
     def get(self, request):
-        # Get all published courses
+        # Get query parameters for filtering
+        search_query = request.query_params.get('search', '').strip()
+        types_filter = request.query_params.getlist(
+            'types')  # ['course', 'roadmap']
+        categories_filter = request.query_params.getlist('category')
+        organizers_filter = request.query_params.getlist('organizer')
+        duration_filter = request.query_params.getlist('duration')
+        sort_option = request.query_params.get('sort', 'default')
+
+        # Build base querysets
         courses_queryset = Course.objects.filter(
             status='published',
             published_at__lte=timezone.now()
-        )
-
-        # Add any essential annotations that will be needed for sorting on frontend
-        courses_queryset = courses_queryset.annotate(
+        ).annotate(
             enrollment_count=Count('enrollments')
-        )
+        ).prefetch_related('teachers', 'categories', 'organizers', 'tags')
 
-        # Include related data to avoid N+1 queries
-        courses_queryset = courses_queryset.prefetch_related(
-            'teachers', 'categories', 'organizers', 'tags'
-        )
-
-        # Get all published roadmaps
         roadmaps_queryset = RoadMap.objects.filter(
             status='published',
             published_at__lte=timezone.now()
-        )
+        ).prefetch_related('courses__categories', 'courses__organizers')
 
-        # Prefetch related courses for roadmaps
-        roadmaps_queryset = roadmaps_queryset.prefetch_related('courses')
+        # Apply filtering to courses
+        if search_query:
+            courses_queryset = courses_queryset.filter(
+                Q(title__icontains=search_query) |
+                Q(description__icontains=search_query) |
+                Q(teachers__first_name__icontains=search_query) |
+                Q(teachers__last_name__icontains=search_query)
+            ).distinct()
 
-        # Serialize both types of content
+        if categories_filter:
+            courses_queryset = courses_queryset.filter(
+                categories__slug__in=categories_filter
+            ).distinct()
+
+        if organizers_filter:
+            courses_queryset = courses_queryset.filter(
+                organizers__organization_slug__in=organizers_filter
+            ).distinct()
+
+        if duration_filter:
+            duration_q = Q()
+            for duration in duration_filter:
+                if duration == 'upto30min':
+                    duration_q |= Q(total_hours__lte=0.5)
+                elif duration == '30min2hours':
+                    duration_q |= Q(total_hours__gt=0.5, total_hours__lte=2)
+                elif duration == '2to5hours':
+                    duration_q |= Q(total_hours__gt=2, total_hours__lte=5)
+                elif duration == 'morethan5hours':
+                    duration_q |= Q(total_hours__gt=5)
+            if duration_q:
+                courses_queryset = courses_queryset.filter(duration_q)
+
+        # Apply filtering to roadmaps
+        if search_query:
+            roadmaps_queryset = roadmaps_queryset.filter(
+                Q(name__icontains=search_query) |
+                Q(description__icontains=search_query)
+            ).distinct()
+
+        if categories_filter:
+            roadmaps_queryset = roadmaps_queryset.filter(
+                courses__categories__slug__in=categories_filter
+            ).distinct()
+
+        if organizers_filter:
+            roadmaps_queryset = roadmaps_queryset.filter(
+                courses__organizers__organization_slug__in=organizers_filter
+            ).distinct()
+
+        if duration_filter:
+            duration_q = Q()
+            for duration in duration_filter:
+                if duration == 'upto30min':
+                    duration_q |= Q(courses__total_hours__lte=0.5)
+                elif duration == '30min2hours':
+                    duration_q |= Q(courses__total_hours__gt=0.5,
+                                    courses__total_hours__lte=2)
+                elif duration == '2to5hours':
+                    duration_q |= Q(courses__total_hours__gt=2,
+                                    courses__total_hours__lte=5)
+                elif duration == 'morethan5hours':
+                    duration_q |= Q(courses__total_hours__gt=5)
+            if duration_q:
+                roadmaps_queryset = roadmaps_queryset.filter(
+                    duration_q).distinct()
+
+        # Apply sorting to querysets
+        if sort_option == 'newest':
+            courses_queryset = courses_queryset.order_by('-published_at')
+            roadmaps_queryset = roadmaps_queryset.order_by('-published_at')
+        elif sort_option == 'popular':
+            courses_queryset = courses_queryset.order_by('-enrollment_count')
+            # For roadmaps, order by sum of course enrollments (simplified approach)
+            roadmaps_queryset = roadmaps_queryset.annotate(
+                total_enrollments=Count('courses__enrollments')
+            ).order_by('-total_enrollments')
+        else:  # default
+            courses_queryset = courses_queryset.order_by('id')
+            roadmaps_queryset = roadmaps_queryset.order_by('id')
+
+        # Serialize data
         courses_serializer = CourseSerializer(courses_queryset, many=True)
         roadmaps_serializer = RoadMapSerializer(roadmaps_queryset, many=True)
 
-        # Prepare metadata needed for filtering
-        unique_categories = set()
-        for course in courses_queryset:
-            for category in course.categories.all():
-                unique_categories.add(category)
-
-        unique_organizers = set()
-        for course in courses_queryset:
-            for org in course.organizers.all():
-                unique_organizers.add(org)
-
-        # Serialize the metadata
-        categories_data = CategorySerializer(unique_categories, many=True).data
-        organizers_data = OrganizerSerializer(
-            unique_organizers, many=True).data
-
-        # Add content type information to each item
         courses_data = courses_serializer.data
         for course in courses_data:
             course['content_type'] = 'course'
@@ -131,9 +200,62 @@ class CourseListView(APIView):
         for roadmap in roadmaps_data:
             roadmap['content_type'] = 'roadmap'
 
-        # Combine courses and roadmaps into a single list
-        combined_content = courses_data + roadmaps_data
+        # Filter by content type if specified
+        combined_content = []
+        if not types_filter or 'course' in types_filter:
+            combined_content.extend(courses_data)
+        if not types_filter or 'roadmap' in types_filter:
+            combined_content.extend(roadmaps_data)
 
+        # Sort combined content if needed (for mixed sorting of courses and roadmaps)
+        if sort_option == 'newest':
+            combined_content.sort(key=lambda x: x.get(
+                'published_at', ''), reverse=True)
+        elif sort_option == 'popular':
+            def get_popularity(item):
+                if item['content_type'] == 'course':
+                    return item.get('enrollment_count', 0)
+                else:  # roadmap
+                    return sum(course.get('enrollment_count', 0) for course in item.get('courses', []))
+            combined_content.sort(key=get_popularity, reverse=True)
+        elif sort_option == 'default':
+            combined_content.sort(key=lambda x: x.get('id', 0))
+
+        # Generate metadata (for all available options, not filtered)
+        all_courses = Course.objects.filter(
+            status='published',
+            published_at__lte=timezone.now()
+        ).prefetch_related('categories', 'organizers')
+
+        unique_categories = set()
+        unique_organizers = set()
+
+        for course in all_courses:
+            for category in course.categories.all():
+                unique_categories.add(category)
+            for org in course.organizers.all():
+                unique_organizers.add(org)
+
+        categories_data = CategorySerializer(unique_categories, many=True).data
+        organizers_data = OrganizerSerializer(
+            unique_organizers, many=True).data
+
+        # Apply pagination
+        paginator = self.pagination_class()
+        page = paginator.paginate_queryset(
+            combined_content, request, view=self)
+
+        if page is not None:
+            return paginator.get_paginated_response({
+                'content': page,
+                'metadata': {
+                    'categories': categories_data,
+                    'organizers': organizers_data,
+                    'types': ['course', 'roadmap']
+                }
+            })
+
+        # Fallback without pagination
         return Response({
             'content': combined_content,
             'metadata': {
